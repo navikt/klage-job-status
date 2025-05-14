@@ -1,0 +1,17 @@
+{
+  "name": "action",
+  "scripts": {
+    "test": "bun test",
+    "lint": "biome check",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@types/bun": "1.2.13",
+    "typescript": "5.8.3"
+  },
+  "dependencies": {
+    "@actions/core": "1.11.1",
+    "date-fns": "^4.1.0"
+  }
+}

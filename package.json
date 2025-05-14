@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "start": "bun app/app.ts",
+    "test": "bun test",
+    "lint": "biome check",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@types/bun": "1.2.13",
+    "typescript": "5.8.3"
+  }
+}

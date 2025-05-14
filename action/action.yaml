@@ -1,0 +1,57 @@
+name: 'Job status'
+
+description: 'Check status for job'
+
+inputs:
+  api_key:
+    description: 'API key for authentication'
+    required: true
+  namespace:
+    description: 'Your team namespace'
+    required: true
+  job_id:
+    description: 'ID for the job to check'
+    required: true
+  fail:
+    description: 'Fail if job is failed'
+    required: false
+    default: 'true'
+  fail_on_unknown:
+    description: 'Fail if job status is unknown'
+    required: false
+    default: 'true'
+
+outputs:
+  status:
+    description: 'Job status'
+    value: ${{ steps.status.outputs.status }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: 1.2.13
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        repository: navikt/klage-job-status
+    
+    - name: Install dependencies
+      shell: bash
+      working-directory: ./action
+      run: bun install --frozen-lockfile
+
+    - name: Job status
+      id: status
+      shell: bash
+      working-directory: ./action
+      env:
+        API_KEY: ${{ inputs.api_key }}
+        NAMESPACE: ${{ inputs.namespace }}
+        JOB_ID: ${{ inputs.job_id }}
+        FAIL: ${{ inputs.fail }}
+        FAIL_ON_UNKNOWN: ${{ inputs.fail_on_unknown }}
+      run: bun action.ts

@@ -1,0 +1,33 @@
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  name: klage-job-status
+  namespace: klage
+  labels:
+    team: klage
+spec:
+  image: {{image}}
+  replicas:
+    min: 2
+    max: 3
+  accessPolicy:
+    inbound:
+      rules:
+        - application: kabal-e2e-tests
+  ingresses:
+    - https://klage-job-status.ekstern.dev.nav.no
+  valkey:
+    - instance: klage-job-status
+      access: readwrite
+  liveness:
+    path: /isAlive
+    initialDelay: 3
+    periodSeconds: 1
+    timeout: 1
+    failureThreshold: 10
+  readiness:
+    path: /isReady
+    initialDelay: 3
+    periodSeconds: 1
+    timeout: 1
+    failureThreshold: 10

@@ -1,0 +1,15 @@
+meta {
+  name: SSE job (not supported by Bruno yet)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{URL}}/jobs/klage/123
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: text/event-stream
+}

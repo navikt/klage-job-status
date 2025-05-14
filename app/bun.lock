@@ -1,0 +1,25 @@
+{
+  "lockfileVersion": 1,
+  "workspaces": {
+    "": {
+      "dependencies": {
+        "redis": "5.0.1",
+      },
+    },
+  },
+  "packages": {
+    "@redis/bloom": ["@redis/bloom@5.0.1", "", { "peerDependencies": { "@redis/client": "^5.0.1" } }, "sha512-F7L+rnuJvq/upKaVoEgsf8VT7g5pLQYWRqSUOV3uO4vpVtARzSKJ7CLyJjVsQS+wZVCGxsLMh8DwAIDcny1B+g=="],
+
+    "@redis/client": ["@redis/client@5.0.1", "", { "dependencies": { "cluster-key-slot": "1.1.2" } }, "sha512-k0EJvlMGEyBqUD3orKe0UMZ66fPtfwqPIr+ZSd853sXj2EyhNtPXSx+J6sENXJNgAlEBhvD+57Dwt0qTisKB0A=="],
+
+    "@redis/json": ["@redis/json@5.0.1", "", { "peerDependencies": { "@redis/client": "^5.0.1" } }, "sha512-t94HOTk5myfhvaHZzlUzk2hoUvH2jsjftcnMgJWuHL/pzjAJQoZDCUJzjkoXIUjWXuyJixTguaaDyOZWwqH2Kg=="],
+
+    "@redis/search": ["@redis/search@5.0.1", "", { "peerDependencies": { "@redis/client": "^5.0.1" } }, "sha512-wipK6ZptY7K68B7YLVhP5I/wYCDUU+mDJMyJiUcQLuOs7/eKOBc8lTXKUSssor8QnzZSPy4A5ulcC5PZY22Zgw=="],
+
+    "@redis/time-series": ["@redis/time-series@5.0.1", "", { "peerDependencies": { "@redis/client": "^5.0.1" } }, "sha512-k6PgbrakhnohsEWEAdQZYt3e5vSKoIzpKvgQt8//lnWLrTZx+c3ed2sj0+pKIF4FvnSeuXLo4bBWcH0Z7Urg1A=="],
+
+    "cluster-key-slot": ["cluster-key-slot@1.1.2", "", {}, "sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA=="],
+
+    "redis": ["redis@5.0.1", "", { "dependencies": { "@redis/bloom": "5.0.1", "@redis/client": "5.0.1", "@redis/json": "5.0.1", "@redis/search": "5.0.1", "@redis/time-series": "5.0.1" } }, "sha512-J8nqUjrfSq0E8NQkcHDZ4HdEQk5RMYjP3jZq02PE+ERiRxolbDNxPaTT4xh6tdrme+lJ86Goje9yMt9uzh23hQ=="],
+  }
+}

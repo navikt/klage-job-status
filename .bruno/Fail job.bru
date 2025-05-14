@@ -1,0 +1,15 @@
+meta {
+  name: Fail job
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{URL}}/jobs/klage/123/failed
+  body: json
+  auth: none
+}
+
+body:json {
+  { "name": "E2E Run 43453" }
+}

@@ -1,0 +1,112 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "files": {
+    "ignore": [".bruno"]
+  },
+  "organizeImports": {
+    "enabled": true
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "all": true,
+      "nursery": {
+        "all": true,
+        "useImportRestrictions": {
+          "level": "off"
+        },
+        "noSecrets": {
+          "level": "off",
+          "options": {}
+        },
+        "useComponentExportOnlyModules": {
+          "level": "off",
+          "options": {}
+        },
+        "noEnum": {
+          "level": "off"
+        },
+        "useExplicitType": {
+          "level": "off"
+        },
+        "useConsistentMemberAccessibility": {
+          "level": "off",
+          "options": {}
+        },
+        "useConsistentCurlyBraces": {
+          "level": "off",
+          "fix": "none"
+        },
+        "noProcessEnv": {
+          "level": "off"
+        }
+      },
+      "correctness": {
+        "noUndeclaredDependencies": {
+          "level": "off"
+        },
+        "useImportExtensions": {
+          "level": "off",
+          "fix": "none",
+          "options": {}
+        },
+        "noUndeclaredVariables": {
+          "level": "off"
+        }
+      },
+      "style": {
+        "noImplicitBoolean": {
+          "level": "off",
+          "fix": "none"
+        },
+        "useDefaultSwitchClause": {
+          "level": "off"
+        },
+        "useNamingConvention": {
+          "level": "off",
+          "fix": "none",
+          "options": {}
+        }
+      },
+      "suspicious": {
+        "noConsole": {
+          "level": "off",
+          "options": {
+            "allow": ["debug", "info", "warn", "error"]
+          }
+        },
+        "noReactSpecificProps": {
+          "level": "off"
+        },
+        "noEmptyBlockStatements": {
+          "level": "off"
+        }
+      },
+      "complexity": {
+        "useSimplifiedLogicExpression": {
+          "level": "off"
+        },
+        "noExcessiveCognitiveComplexity": {
+          "level": "warn",
+          "options": {
+            "maxAllowedComplexity": 25
+          }
+        }
+      }
+    }
+  },
+  "formatter": {
+    "lineWidth": 120,
+    "indentStyle": "space"
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "arrowParentheses": "always",
+      "bracketSameLine": false
+    },
+    "linter": {
+      "enabled": true
+    }
+  }
+}

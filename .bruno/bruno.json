@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "name": "Klage Job Status",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ],
+  "size": 0.0011043548583984375,
+  "filesCount": 7,
+  "presets": {
+    "requestType": "http",
+    "requestUrl": "http://localhost:8080/jobs/"
+  }
+}

@@ -1,0 +1,57 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+run-name: Deploy of ${{ github.ref_name }}
+
+jobs:
+  build-and-deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.13
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          bun install --frozen-lockfile
+          cd app
+          bun install --frozen-lockfile
+
+      - name: Test frontend
+        shell: bash
+        run: bun test
+
+      - name: Build & push Docker image
+        uses: nais/docker-build-push@v0
+        id: docker-build-push
+        with:
+          team: klage # required
+          tag: ${{ github.sha }} # optional
+          push_image: true # optional, default true
+          dockerfile: Dockerfile # optional, default Dockerfile
+          docker_context: . # optional, default .
+          cache_from: type=gha # optional, default type=gha
+          cache_to: type=gha,mode=max # optional, default type=gha,mode=max
+          identity_provider: ${{ secrets.NAIS_WORKLOAD_IDENTITY_PROVIDER }} # required, but is defined as an organization secret
+          project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }} # required, but is defined as an organization variable
+
+      - name: Deploy
+        uses: nais/deploy/actions/deploy@v2
+        env:
+          CLUSTER: dev-gcp
+          RESOURCE: nais/nais.yaml
+          VAR: image=${{ steps.docker-build-push.outputs.image }}

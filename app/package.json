@@ -1,0 +1,6 @@
+{
+  "name": "app",
+  "dependencies": {
+    "redis": "5.0.1"
+  }
+}

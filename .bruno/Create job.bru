@@ -1,0 +1,15 @@
+meta {
+  name: Create job
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{URL}}/jobs/klage/123
+  body: json
+  auth: none
+}
+
+body:json {
+  { "name": "E2E Run 43453" }
+}
