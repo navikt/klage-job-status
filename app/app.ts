@@ -312,6 +312,22 @@ Bun.serve({
       },
     },
 
+    '/overview/:namespace': {
+      GET: async (req) => {
+        const [, authError] = authenticate(req);
+
+        if (authError !== null) {
+          return getErrorResponse(authError);
+        }
+
+        const namespace = req.params.namespace.toLowerCase();
+
+        const jobs = await JOBS.getAll(namespace);
+
+        return Response.json(jobs, { status: 200 });
+      },
+    },
+
     '/api-keys/:namespace': {
       GET: (req) => {
         const [navIdent, authError] = authenticate(req);
