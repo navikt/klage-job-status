@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ESNext",
     "useDefineForClassFields": true,
     "lib": ["ESNext"],
     "module": "ESNext",
@@ -23,13 +23,14 @@
     /* Paths */
     "baseUrl": "./",
     "paths": {
-      "@app/*": ["app/*"],
+      "@api/*": ["api/*"],
       "@action/*": ["action/*"],
+      "@app/*": ["app/*"],
       "@common/*": ["common/*"]
     },
 
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo"
   },
-  "include": ["app/**/*", "action/**/*", "common/**/*"]
+  "include": ["api/**/*", "action/**/*", "app/**/*", "common/**/*"]
 }

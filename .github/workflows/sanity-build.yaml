@@ -17,28 +17,39 @@ jobs:
         with:
           bun-version: 1.2.13
 
-      - name: Install dependencies
+      - name: Install global dependencies
         shell: bash
         run: bun install --frozen-lockfile
+      
+      - name: Install API dependencies
+        shell: bash
+        working-directory: api
+        run: bun install --frozen-lockfile
 
+      - name: Add GitHub NPM registry token
+        shell: bash
+        working-directory: app
+        run: echo -e "\n[install.scopes]\n\"@navikt\" = { token = \"${{ secrets.READER_TOKEN }}\", url = \"https://npm.pkg.github.com/\" }" >> bunfig.toml
+      
       - name: Install app dependencies
         shell: bash
-        working-directory: ./app
+        working-directory: app
         run: bun install --frozen-lockfile
 
-      - name: Install action dependencies
+      - name: Typecheck API
         shell: bash
-        working-directory: ./action
-        run: bun install --frozen-lockfile
+        working-directory: api
+        run: bun run typecheck
 
-      - name: Typecheck
+      - name: Typecheck app
         shell: bash
+        working-directory: app
         run: bun run typecheck
 
       - name: Lint
         shell: bash
         run: bun run lint
 
-      - name: Test
+      - name: Run tests
         shell: bash
         run: bun test

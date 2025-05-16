@@ -1,13 +1,19 @@
 {
   "scripts": {
-    "start": "bun app/app.ts",
+    "api": "bun run --cwd api bun start",
+    "app": "bun run --cwd app bun start",
     "test": "bun test",
-    "lint": "biome check",
-    "typecheck": "tsc --noEmit"
+    "lint": "biome check"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "@types/bun": "1.2.13",
     "typescript": "5.8.3"
+  },
+  "dependencies": {
+    "@types/react": "19.1.4",
+    "@types/react-dom": "19.1.5",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
   }
 }

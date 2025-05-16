@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+
+    /* Bundler mode */
+    "jsx": "react-jsx"
+  },
+  "exclude": ["dist/"],
+  "include": ["**/*.ts", "**/*.tsx"]
+}
