@@ -1,6 +1,6 @@
 import { JOB_URL } from '@action/input';
 import { formatJobName } from '@action/job-name';
-import { ExitCode, error, info, notice, setOutput } from '@actions/core';
+import { ExitCode, info, setOutput, summary } from '@actions/core';
 import { type Job, Status } from '@common/common';
 import { formatDuration, intervalToDuration } from 'date-fns';
 
@@ -10,15 +10,20 @@ export const handleJob = (job: Job) => {
 
   info(`${formatJobName(job)} has status ${job.status} after ${formattedRuntime}`);
 
+  summary.addRaw(`Runtime: ${formattedRuntime}`);
+  summary.addLink('See status at', JOB_URL);
+
   if (job.status === Status.SUCCESS) {
     setOutput('status', 'success');
-    notice(`Runtime: ${formattedRuntime}.\nSee status at ${JOB_URL}`, { title: `${formatJobName(job)} succeeded` });
+    summary.addHeading(`${formatJobName(job)} succeeded`);
+    summary.write({ overwrite: true });
     process.exit(ExitCode.Success);
   }
 
   if (job.status === Status.FAILED) {
     setOutput('status', 'failed');
-    error(`Runtime: ${formattedRuntime}.\nSee status at ${JOB_URL}`, { title: `${formatJobName(job)} failed` });
+    summary.addHeading(`${formatJobName(job)} failed`);
+    summary.write({ overwrite: true });
     process.exit(ExitCode.Failure);
   }
 };
