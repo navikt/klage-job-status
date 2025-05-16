@@ -4,10 +4,7 @@ description: 'Check status for job'
 
 inputs:
   api_key:
-    description: 'API key for authentication'
-    required: true
-  namespace:
-    description: 'Your team namespace'
+    description: 'Read API key'
     required: true
   job_id:
     description: 'ID for the job to check'
@@ -50,7 +47,6 @@ runs:
       working-directory: ./action
       env:
         API_KEY: ${{ inputs.api_key }}
-        NAMESPACE: ${{ inputs.namespace }}
         JOB_ID: ${{ inputs.job_id }}
         FAIL: ${{ inputs.fail }}
         FAIL_ON_UNKNOWN: ${{ inputs.fail_on_unknown }}

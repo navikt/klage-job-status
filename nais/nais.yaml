@@ -19,6 +19,21 @@ spec:
   valkey:
     - instance: klage-job-status
       access: readwrite
+  envFrom:
+    - secret: klage-job-status
+  azure:
+    application:
+      enabled: true
+      tenant: nav.no
+      allowAllUsers: true
+      claims:
+        extra:
+          - NAVident
+    sidecar:
+      enabled: true
+      autoLogin: true
+      autoLoginIgnorePaths:
+        - /jobs/**
   liveness:
     path: /isAlive
     initialDelay: 3

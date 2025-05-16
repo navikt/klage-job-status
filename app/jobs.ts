@@ -1,5 +1,6 @@
-import { getJobId } from '@app/helpers';
-import { type CreateJobInput, ErrorEnum, type JobParams } from '@app/types';
+import { ErrorEnum } from '@app/error';
+import { getJobKey } from '@app/job-key';
+import type { CreateJobInput } from '@app/types';
 import { type Job, Status, isJob } from '@common/common';
 import { type RedisClientType, createClient } from 'redis';
 
@@ -34,14 +35,14 @@ class Jobs {
     console.debug('Connected to Valkey Data and Subscribe clients');
   }
 
-  public async create(jobParams: JobParams, input?: CreateJobInput): Promise<ErrorEnum | null> {
-    const jobId = getJobId(jobParams);
+  public async create(namespace: string, jobId: string, input?: CreateJobInput): Promise<ErrorEnum | null> {
+    const key = getJobKey(namespace, jobId);
 
-    if (jobId === null) {
+    if (key === null) {
       return ErrorEnum.INVALID_JOB_ID;
     }
 
-    if (await this.#exists(jobId)) {
+    if (await this.#exists(key)) {
       return ErrorEnum.ALREADY_EXISTS;
     }
 
@@ -59,7 +60,7 @@ class Jobs {
 
     try {
       // EX seconds -- Set the specified expire time, in seconds (a positive integer).
-      await this.#client.set(jobId, JSON.stringify(job), {
+      await this.#client.set(key, JSON.stringify(job), {
         expiration: { type: 'EX', value: timeout === undefined ? DEFAULT_TIMEOUT : Math.min(timeout, MAX_TIMEOUT) },
       });
 
@@ -70,42 +71,67 @@ class Jobs {
     }
   }
 
-  #get = async (jobId: string): Promise<[Job, null] | [null, ErrorEnum]> => {
-    const job = await this.#client.get(jobId);
+  #get = async (key: string): Promise<[Job, null] | [null, ErrorEnum]> => {
+    const job = await this.#client.get(key);
 
     if (job === null) {
+      console.warn(`Job "${key}" not found`);
       return [null, ErrorEnum.NOT_FOUND];
     }
 
     const parsedJob: unknown = JSON.parse(job);
 
     if (!isJob(parsedJob)) {
-      console.error({ msg: 'Invalid job', jobId, status: job });
-      this.#delete(jobId);
+      console.error(`Invalid job ${key}\n${job}`);
+      this.#delete(key);
       return [null, ErrorEnum.NOT_FOUND];
     }
 
     return [parsedJob, null];
   };
 
-  public async get(jobParams: JobParams): Promise<[Job, null] | [null, ErrorEnum]> {
-    const jobId = getJobId(jobParams);
+  public async get(namespace: string, jobId: string): Promise<[Job, null] | [null, ErrorEnum]> {
+    const key = getJobKey(namespace, jobId);
 
-    if (jobId === null) {
+    if (key === null) {
       return [null, ErrorEnum.INVALID_JOB_ID];
     }
 
-    return await this.#get(jobId);
+    return await this.#get(key);
   }
 
-  public async update(jobParams: JobParams, status: Status): Promise<ErrorEnum | null> {
-    const jobId = getJobId(jobParams);
+  public async getAll(namespace: string): Promise<Job[]> {
+    const keys = await this.#client.keys(`${namespace}:*`);
+    const jobs = await this.#client.mGet(keys);
 
-    if (jobId === null) {
+    const parsedJobs: Job[] = [];
+
+    for (const job of jobs) {
+      if (job === null) {
+        continue;
+      }
+
+      const parsedJob: unknown = JSON.parse(job);
+
+      if (!isJob(parsedJob)) {
+        console.error(`Invalid job ${job}`);
+        continue;
+      }
+
+      parsedJobs.push(parsedJob);
+    }
+
+    return parsedJobs;
+  }
+
+  public async update(namespace: string, jobId: string, status: Status): Promise<ErrorEnum | null> {
+    const key = getJobKey(namespace, jobId);
+
+    if (key === null) {
       return ErrorEnum.INVALID_JOB_ID;
     }
 
-    const [existing, error] = await this.#get(jobId);
+    const [existing, error] = await this.#get(key);
 
     if (error !== null) {
       return error;
@@ -114,7 +140,14 @@ class Jobs {
     const alreadyEnded = existing.ended !== null;
 
     if (alreadyEnded) {
-      return status === existing.status ? null : ErrorEnum.ALREADY_ENDED;
+      if (status === existing.status) {
+        return null;
+      }
+
+      console.warn(
+        `Failed to update job "${key}" from status "${existing.status}" to "${status}" - ${ErrorEnum.ALREADY_ENDED}`,
+      );
+      return ErrorEnum.ALREADY_ENDED;
     }
 
     const ended = status === Status.SUCCESS || status === Status.FAILED;
@@ -126,46 +159,47 @@ class Jobs {
 
     try {
       const json = JSON.stringify(updatedJob);
-      await Promise.all([this.#client.set(jobId, json), this.#client.publish(jobId, json)]);
+      await Promise.all([this.#client.set(key, json), this.#client.publish(key, json)]);
     } catch (error) {
-      console.error({ msg: 'Error updating job data', error });
+      console.error('Error updating job data', error);
       return ErrorEnum.ERROR_UPDATING;
     }
 
     return null;
   }
 
-  #delete = async (jobId: string): Promise<ErrorEnum | null> => {
+  #delete = async (key: string): Promise<ErrorEnum | null> => {
     try {
-      await this.#client.del(jobId);
+      await this.#client.del(key);
+      console.debug(`Deleted job "${key}"`);
     } catch (error) {
-      console.error({ msg: 'Error deleting job data', error });
+      console.error('Error deleting job data', error);
       return ErrorEnum.ERROR_DELETING;
     }
 
     return null;
   };
 
-  public async delete(jobParams: JobParams): Promise<ErrorEnum | null> {
-    const jobId = getJobId(jobParams);
+  public async delete(namespace: string, jobId: string): Promise<ErrorEnum | null> {
+    const key = getJobKey(namespace, jobId);
 
-    if (jobId === null) {
+    if (key === null) {
       return ErrorEnum.INVALID_JOB_ID;
     }
 
-    return await this.#delete(jobId);
+    return await this.#delete(key);
   }
 
-  #exists = async (jobId: string): Promise<boolean> => (await this.#client.exists(jobId)) !== 0;
+  #exists = async (key: string): Promise<boolean> => (await this.#client.exists(key)) !== 0;
 
-  public async subscribe(jobParams: JobParams, listener: Listener) {
-    const jobId = getJobId(jobParams);
+  public async subscribe(namespace: string, jobId: string, listener: Listener) {
+    const key = getJobKey(namespace, jobId);
 
-    if (jobId === null) {
+    if (key === null) {
       return;
     }
 
-    await this.#subscribeClient.subscribe(jobId, (message) => {
+    await this.#subscribeClient.subscribe(key, (message) => {
       const job: unknown = JSON.parse(message);
 
       if (isJob(job)) {
@@ -174,14 +208,14 @@ class Jobs {
     });
   }
 
-  public async unsubscribe(jobParams: JobParams) {
-    const jobId = getJobId(jobParams);
+  public async unsubscribe(namespace: string, jobId: string) {
+    const key = getJobKey(namespace, jobId);
 
-    if (jobId === null) {
+    if (key === null) {
       return;
     }
 
-    await this.#subscribeClient.unsubscribe(jobId);
+    await this.#subscribeClient.unsubscribe(key);
   }
 
   public async ping() {

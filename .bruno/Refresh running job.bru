@@ -1,0 +1,15 @@
+meta {
+  name: Refresh running job
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{URL}}/jobs/123/running
+  body: json
+  auth: none
+}
+
+headers {
+  API_KEY: {{WRITE_API_KEY}}
+}

@@ -1,11 +1,13 @@
 import { handleJob } from '@action/handle-job';
 import { checkStatus } from '@action/http';
-import { JOB_URL, TIMEOUT } from '@action/input';
+import { API_KEY, JOB_URL, TIMEOUT } from '@action/input';
 import { formatJobName } from '@action/job-name';
 import { ExitCode, error } from '@actions/core';
 import { isJob } from '@common/common';
 
-export const poll = async (response: Response, headers: Headers) => {
+const headers = new Headers({ API_KEY, accept: 'application/json' });
+
+export const poll = async (response: Response) => {
   const job = await response.json();
 
   if (!isJob(job)) {
@@ -13,7 +15,7 @@ export const poll = async (response: Response, headers: Headers) => {
     process.exit(ExitCode.Failure);
   }
 
-  handleJob(job); // This will exit the process if the job is not running.
+  await handleJob(job); // This will exit the process if the job is not running.
 
   // If the job is still running, we need to poll for updates. SSE was not offered by the server.
   const ended = Date.now() + TIMEOUT * 1_000;

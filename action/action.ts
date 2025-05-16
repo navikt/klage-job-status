@@ -3,7 +3,7 @@ import { API_KEY, JOB_URL, TIMEOUT } from '@action/input';
 import { formatJobName } from '@action/job-name';
 import { poll } from '@action/poll';
 import { sse } from '@action/sse';
-import { ExitCode, error } from '@actions/core';
+import { ExitCode, error, info } from '@actions/core';
 
 const MAX_ATTEMPTS = 30;
 
@@ -28,8 +28,10 @@ await checkStatus(response);
 const contentType = response.headers.get('content-type')?.split(';')[0];
 
 if (contentType === 'application/json') {
-  await poll(response, headers);
+  info('Using polling to get job status');
+  await poll(response);
 } else if (contentType === 'text/event-stream') {
+  info('Using SSE to get job status');
   await sse(response);
 } else {
   error(contentType ?? 'undefined', { title: `${formatJobName()} - Unexpected content type` });

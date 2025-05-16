@@ -9,6 +9,7 @@ services:
       - REDIS_URI_KLAGE_JOB_STATUS=redis://valkey:6379/0
       - REDIS_USERNAME_KLAGE_JOB_STATUS=default
       - REDIS_PASSWORD_KLAGE_JOB_STATUS=redis_password
+      - API_KEY_SECRET=secret
   valkey:
     image: valkey/valkey:alpine
     restart: always
