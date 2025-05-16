@@ -1,0 +1,12 @@
+{
+  "name": "api",
+  "scripts": {
+    "start": "bun api.ts",
+    "test": "bun test",
+    "lint": "biome check",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "redis": "5.1.0"
+  }
+}

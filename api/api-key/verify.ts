@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { type AccessScope, validateScope } from '@app/api-key/scope';
-import { API_KEY_SECRET } from '@app/api-key/secret';
-import { ErrorEnum } from '@app/error';
+import { type AccessScope, validateScope } from '@api/api-key/scope';
+import { API_KEY_SECRET } from '@api/api-key/secret';
+import { ErrorEnum } from '@api/error';
 
 /**
  * Verify the API key.

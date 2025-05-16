@@ -39,5 +39,23 @@
   },
   "[jsonc]": {
     "editor.defaultFormatter": "biomejs.biome"
-  }
+  },
+  "search.exclude": {
+    ".git": true,
+    "bun.lock": true,
+    "**/bun.lock": true,
+    "node_modules": true,
+    "dist": true,
+    "**/dist": true,
+    ".tsbuildinfo": true,
+    "**/.tsbuildinfo": true
+  },
+  "tailwindCSS.experimental.classRegex": [
+    ":\\s*?[\"'`]([^\"'`]*).*?,",
+    "const\\s\\w*Classes\\s+=\\s+[\"'`]([^\"'`]*)",
+    "const\\s\\w*Class\\s+=\\s+[\"'`]([^\"'`]*)",
+    "const\\s\\w*_CLASSES\\s+=\\s+[\"'`]([^\"'`]*)",
+    "const\\s\\w*_CLASS\\s+=\\s+[\"'`]([^\"'`]*)",
+    "@tw\\s\\*/\\s+[\"'`]([^\"'`]*)"
+  ]
 }

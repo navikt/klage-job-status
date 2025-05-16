@@ -10,10 +10,10 @@ Statusen kan så hentes av GitHub Actions eller andre applikasjoner/jobber.
 
 ### API Key
 For å bruke API-et må du ha en API-nøkkel.
-Du kan hente API-nøkler med endepunktet [`/api-keys/<namespace>`](https://klage-job-status.ekstern.dev.nav.no/api-keys/example-namespace).
-> Bytt ut `example-namespace` med ditt eget team eller namespace. Lowercase bokstaver, understrek og bindestrek er tillatt.
+Du kan generere API-nøkler i appen [klage-job-status](https://klage-job-status.ekstern.dev.nav.no).
+> Du må være logget inn med din NAV-konto for å kunne generere API-nøkler.
 
-Alle endepunkter krever en API-nøkkel i headeren `API_KEY`.
+Alle `/jobs`-endepunkter krever en API-nøkkel i headeren `API_KEY`.
 
 #### Eksempler
 - `API_KEY: klage:read.MU71PJn99JCV2a2py6uQw3_aL7I6YSH_Dd3HLAhr5WM`
@@ -110,6 +110,34 @@ Dette endepunktet kan ta imot en JSON payload med følgende felter:
 }
 ```
 
+### `PUT /jobs/<jobId>/status`
+Input: `text/plain` - `RUNNING`, `SUCCESS` eller `FAILED`
+
+Returnerer: `application/json`
+
+Setter jobben sin `status` og returnerer jobben.
+
+### `PUT /jobs/<jobId>/success`
+Input: ingenting
+
+Returnerer: `application/json`
+
+Setter jobben sin `status` til `SUCCESS` og returnerer jobben.
+
+### `PUT /jobs/<jobId>/failed`
+Input: ingenting
+
+Returnerer: `application/json`
+
+Setter jobben sin `status` til `FAILED` og returnerer jobben.
+
+### `PUT /jobs/<jobId>/running` - `text/plain`
+Input: ingenting
+
+Returnerer: `application/json`
+
+Setter jobben sin `status` til `RUNNING` og returnerer jobben.
+
 ### `GET /jobs/<jobId>` - `application/json`
 Returnerer hele jobben.
 Dette endepunktet støtter også SSE (Server-Sent Events) ved å legge til `Accept: text/event-stream` i headeren.
@@ -118,10 +146,13 @@ Lytt på `job`-eventer og parse `data`-feltet som JSON.
 #### Running
 ```json
 {
+  "id": "jobId",
+  "namespace": "klage",
   "status": "RUNNING",
   "created": 1747221619071,
   "modified": 1747221619071,
   "ended": null,
+  "timeout": 600,
   "name": "Min jobb"
 }
 ```
@@ -129,10 +160,13 @@ Lytt på `job`-eventer og parse `data`-feltet som JSON.
 #### Success
 ```json
 {
+  "id": "jobId",
+  "namespace": "klage",
   "status": "SUCCESS",
   "created": 1747221619071,
   "modified": 1747221619071,
   "ended": 1747221619071,
+  "timeout": 600,
   "name": "Min jobb"
 }
 ```
@@ -140,10 +174,13 @@ Lytt på `job`-eventer og parse `data`-feltet som JSON.
 #### Failed
 ```json
 {
+  "id": "jobId",
+  "namespace": "klage",
   "status": "FAILED",
   "created": 1747221619071,
   "modified": 1747221619071,
   "ended": 1747221619071,
+  "timeout": 600,
   "name": "Min jobb"
 }
 ```

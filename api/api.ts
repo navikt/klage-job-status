@@ -1,17 +1,27 @@
-import { AcceptType, getAcceptValues, preferred } from '@app/accept';
-import { generateApiKey } from '@app/api-key/create';
-import { AccessScope } from '@app/api-key/scope';
-import { verifyApiKey } from '@app/api-key/verify';
-import { ErrorEnum, getErrorResponse } from '@app/error';
-import { JOBS } from '@app/jobs';
-import type { CreateJobInput } from '@app/types';
-import { authenticate } from '@app/user-token';
-import { type Job, Status } from '@common/common';
+import { extname, join } from 'node:path';
+import { AcceptType, getAcceptValues, preferred } from '@api/accept';
+import { generateApiKey } from '@api/api-key/create';
+import { AccessScope } from '@api/api-key/scope';
+import { verifyApiKey } from '@api/api-key/verify';
+import { ErrorEnum, getErrorResponse } from '@api/error';
+import { formatJobKey } from '@api/job-key';
+import { JOBS } from '@api/jobs';
+import { MIME_TYPES } from '@api/mime';
+import type { CreateJobInput } from '@api/types';
+import { authenticate } from '@api/user-token';
+import {
+  type CreateJobEvent,
+  type JobEvent,
+  JobEventType,
+  Status,
+  isValidNamespace,
+  validateLength,
+} from '@common/common';
 
 const isCreateStatusInput = (data: unknown): data is CreateJobInput => data !== null && typeof data === 'object';
 
 const JOBS_PATH = '/jobs';
-const PATH = `${JOBS_PATH}/:jobId`;
+const JOB_PATH = `${JOBS_PATH}/:jobId`;
 
 await JOBS.init();
 
@@ -36,7 +46,7 @@ Bun.serve({
         return Response.json(jobs, { status: 200 });
       },
     },
-    [PATH]: {
+    [JOB_PATH]: {
       GET: async (req) => {
         const [namespace, apiKeyError] = verifyApiKey(req, AccessScope.READ);
 
@@ -60,18 +70,18 @@ Bun.serve({
         }
 
         const { jobId } = req.params;
-        const [status, error] = await JOBS.get(namespace, jobId);
+        const [job, error] = await JOBS.get(namespace, jobId);
 
         if (error !== null) {
           return getErrorResponse(error);
         }
 
         if (preferredType === 'application/json') {
-          return Response.json(status, { status: 200 });
+          return Response.json(job, { status: 200 });
         }
 
-        if (status.status !== Status.RUNNING) {
-          return Response.json(status, { status: 200 });
+        if (job.status !== Status.RUNNING) {
+          return Response.json(job, { status: 200 });
         }
 
         let heartbeatIntervalId: NodeJS.Timeout | null = null;
@@ -82,19 +92,20 @@ Bun.serve({
               controller.enqueue('event:heartbeat\n\n');
             }, 1_000);
 
-            controller.enqueue(sse(status));
+            controller.enqueue(sse({ eventType: JobEventType.CREATED, job }));
 
             JOBS.subscribe(namespace, jobId, (update) => {
               controller.enqueue(sse(update));
 
-              if (update.status !== Status.RUNNING) {
+              // If the job is deleted or stopped, unsubscribe and close the stream.
+              if (update.eventType === JobEventType.DELETED || update.job.status !== Status.RUNNING) {
                 if (heartbeatIntervalId !== null) {
                   clearInterval(heartbeatIntervalId);
                 }
 
                 JOBS.unsubscribe(namespace, jobId);
-
                 controller.close();
+                return;
               }
             });
           },
@@ -135,15 +146,15 @@ Bun.serve({
           return new Response('Invalid input', { status: 400 });
         }
 
-        const error = await JOBS.create(namespace, req.params.jobId, data);
+        const [job, error] = await JOBS.create(namespace, req.params.jobId, data);
 
         if (error !== null) {
           return getErrorResponse(error);
         }
 
-        console.debug(`Created job "${req.params.jobId}" in namespace "${namespace}"`);
+        console.debug(`Created job "${formatJobKey(job)}"`);
 
-        return new Response('Job created', { status: 200 });
+        return Response.json(job, { status: 201 });
       },
 
       DELETE: async (req) => {
@@ -163,7 +174,7 @@ Bun.serve({
       },
     },
 
-    [`${PATH}/status`]: {
+    [`${JOB_PATH}/status`]: {
       GET: async (req) => {
         const [namespace, apiKeyError] = verifyApiKey(req, AccessScope.READ);
 
@@ -198,7 +209,7 @@ Bun.serve({
           );
         }
 
-        const error = await JOBS.update(namespace, req.params.jobId, status);
+        const [job, error] = await JOBS.update(namespace, req.params.jobId, status);
 
         if (error !== null) {
           console.info(`Failed to update job "${req.params.jobId}" to status "${status}" - ${error}`);
@@ -206,11 +217,11 @@ Bun.serve({
           return getErrorResponse(error);
         }
 
-        return new Response('Job updated', { status: 200 });
+        return Response.json(job, { status: 200 });
       },
     },
 
-    [`${PATH}/success`]: {
+    [`${JOB_PATH}/success`]: {
       GET: async (req) => {
         const [namespace, apiKeyError] = verifyApiKey(req, AccessScope.READ);
 
@@ -234,17 +245,17 @@ Bun.serve({
           return getErrorResponse(apiKeyError);
         }
 
-        const error = await JOBS.update(namespace, req.params.jobId, Status.SUCCESS);
+        const [job, error] = await JOBS.update(namespace, req.params.jobId, Status.SUCCESS);
 
         if (error !== null) {
           return getErrorResponse(error);
         }
 
-        return new Response('Job updated', { status: 200 });
+        return Response.json(job, { status: 200 });
       },
     },
 
-    [`${PATH}/failed`]: {
+    [`${JOB_PATH}/failed`]: {
       GET: async (req) => {
         const [namespace, apiKeyError] = verifyApiKey(req, AccessScope.READ);
 
@@ -252,13 +263,13 @@ Bun.serve({
           return getErrorResponse(apiKeyError);
         }
 
-        const [status, error] = await JOBS.get(namespace, req.params.jobId);
+        const [job, error] = await JOBS.get(namespace, req.params.jobId);
 
         if (error !== null) {
           return getErrorResponse(error);
         }
 
-        return new Response(status.status === Status.FAILED ? 'true' : 'false', { status: 200 });
+        return new Response(job.status === Status.FAILED ? 'true' : 'false', { status: 200 });
       },
 
       PUT: async (req) => {
@@ -268,17 +279,17 @@ Bun.serve({
           return getErrorResponse(apiKeyError);
         }
 
-        const error = await JOBS.update(namespace, req.params.jobId, Status.FAILED);
+        const [job, error] = await JOBS.update(namespace, req.params.jobId, Status.FAILED);
 
         if (error !== null) {
           return getErrorResponse(error);
         }
 
-        return new Response('Job updated', { status: 200 });
+        return Response.json(job, { status: 200 });
       },
     },
 
-    [`${PATH}/running`]: {
+    [`${JOB_PATH}/running`]: {
       GET: async (req) => {
         const [namespace, apiKeyError] = verifyApiKey(req, AccessScope.READ);
 
@@ -302,17 +313,17 @@ Bun.serve({
           return getErrorResponse(apiKeyError);
         }
 
-        const error = await JOBS.update(namespace, req.params.jobId, Status.RUNNING);
+        const [job, error] = await JOBS.update(namespace, req.params.jobId, Status.RUNNING);
 
         if (error !== null) {
           return getErrorResponse(error);
         }
 
-        return new Response('Job updated', { status: 200 });
+        return Response.json(job, { status: 200 });
       },
     },
 
-    '/overview/:namespace': {
+    '/api/jobs/:namespace': {
       GET: async (req) => {
         const [, authError] = authenticate(req);
 
@@ -322,13 +333,87 @@ Bun.serve({
 
         const namespace = req.params.namespace.toLowerCase();
 
+        if (!isValidNamespace(namespace)) {
+          console.warn(`Jobs - Invalid namespace "${namespace}"`);
+          return new Response('Invalid namespace', { status: 400 });
+        }
+
+        const accept = getAcceptValues(req.headers.get('accept'));
+
+        if (accept.length === 0) {
+          return new Response('Missing Accept header', { status: 400 });
+        }
+
+        const preferredType = preferred(accept, [AcceptType.SSE, AcceptType.JSON]);
+
+        if (preferredType === null) {
+          return new Response(
+            'No acceptable content type supported. Only text/event-stream and application/json are available. Set the Accept header to one of these values or */*.',
+            { status: 406 },
+          );
+        }
+
         const jobs = await JOBS.getAll(namespace);
 
-        return Response.json(jobs, { status: 200 });
+        if (preferredType === 'application/json') {
+          return Response.json(jobs, { status: 200 });
+        }
+
+        if (preferredType === 'text/event-stream') {
+          let heartbeatIntervalId: NodeJS.Timeout | null = null;
+
+          const stream = new ReadableStream({
+            start(controller) {
+              heartbeatIntervalId = setInterval(() => {
+                controller.enqueue('event:heartbeat\n\n');
+              }, 1_000);
+
+              for (const job of jobs) {
+                const event: CreateJobEvent = { job, eventType: JobEventType.CREATED };
+                controller.enqueue(sse(event));
+              }
+
+              JOBS.subscribeAll(namespace, (update) => {
+                controller.enqueue(sse(update));
+              });
+            },
+            cancel() {
+              if (heartbeatIntervalId !== null) {
+                clearInterval(heartbeatIntervalId);
+              }
+
+              JOBS.unsubscribeAll(namespace);
+            },
+          });
+
+          return new Response(stream, {
+            headers: {
+              'Content-Type': 'text/event-stream',
+              'Cache-Control': 'no-cache',
+              Connection: 'keep-alive',
+            },
+          });
+        }
+
+        return new Response('Unsupported Accept header', { status: 406 });
       },
     },
 
-    '/api-keys/:namespace': {
+    '/api/namespaces': {
+      GET: async (req) => {
+        const [, authError] = authenticate(req);
+
+        if (authError !== null) {
+          return getErrorResponse(authError);
+        }
+
+        const namespaces = await JOBS.getNamespaces();
+
+        return Response.json(namespaces, { status: 200 });
+      },
+    },
+
+    '/api/namespaces/:namespace/keys': {
       GET: (req) => {
         const [navIdent, authError] = authenticate(req);
 
@@ -338,10 +423,7 @@ Bun.serve({
 
         const namespace = req.params.namespace.toLowerCase();
 
-        if (
-          !NAMESPACE_REGEX.test(namespace) ||
-          !validateLength(namespace, NAMESPACE_MIN_LENGTH, NAMESPACE_MAX_LENGTH)
-        ) {
+        if (!isValidNamespace(namespace)) {
           console.warn(`API keys - Invalid namespace "${namespace}" for ${navIdent}`);
           return new Response('Invalid namespace', { status: 400 });
         }
@@ -370,16 +452,35 @@ Bun.serve({
 
       return isAlive ? new Response('OK') : new Response('Not Ready', { status: 418 });
     },
+
+    '/assets/*': {
+      GET: (req) => {
+        const url = new URL(req.url);
+        const path = url.pathname.replace('/assets', '');
+
+        return new Response(Bun.file(join(import.meta.dir, './public/assets', path)), {
+          headers: {
+            'Content-Type': MIME_TYPES[extname(path)] || 'application/octet-stream',
+          },
+        });
+      },
+    },
+
+    '/*': {
+      GET: () => {
+        return new Response(Bun.file(join(import.meta.dir, './public/index.html')), {
+          headers: {
+            Location: '/app',
+            'Content-Type': 'text/html',
+          },
+        });
+      },
+    },
   },
 });
 
-const NAMESPACE_REGEX = /^[a-z-_]+$/;
-const NAMESPACE_MAX_LENGTH = 64;
-const NAMESPACE_MIN_LENGTH = 3;
 const JOB_ID_REGEX = /^[a-zA-Z0-9-_]+$/;
 const JOB_ID_MAX_LENGTH = 64;
 const JOB_ID_MIN_LENGTH = 3;
 
-const validateLength = (value: string, min: number, max: number): boolean => value.length > min && value.length < max;
-
-const sse = (status: Job) => `event:job\ndata:${JSON.stringify(status)}\n\n`;
+const sse = ({ eventType, job }: JobEvent) => `event:${eventType}\ndata:${JSON.stringify(job)}\n\n`;

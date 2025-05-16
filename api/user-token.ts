@@ -1,5 +1,5 @@
-import { IS_LOCAL } from '@app/env';
-import { ErrorEnum } from '@app/error';
+import { IS_LOCAL } from '@api/env';
+import { ErrorEnum } from '@api/error';
 
 export const authenticate = (req: Request): [string, null] | [null, ErrorEnum] => {
   if (IS_LOCAL) {

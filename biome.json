@@ -1,7 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "files": {
-    "ignore": [".bruno"]
+    "ignore": [".bruno", "app/dist"]
   },
   "organizeImports": {
     "enabled": true
@@ -111,7 +111,7 @@
   },
   "overrides": [
     {
-      "include": ["app/**", "action/**"],
+      "include": ["api/**", "action/**"],
       "linter": {
         "rules": {
           "correctness": {

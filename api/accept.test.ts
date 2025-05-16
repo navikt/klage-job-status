@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { AcceptType, type AcceptValue, getAcceptValues, preferred } from '@app/accept';
+import { AcceptType, type AcceptValue, getAcceptValues, preferred } from '@api/accept';
 
 describe('Accept Header', () => {
   describe('Parsing', () => {

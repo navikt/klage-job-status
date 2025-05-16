@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
-import { isAccessScope } from '@app/api-key/scope';
-import { API_KEY_SECRET } from '@app/api-key/secret';
-import { ErrorEnum } from '@app/error';
+import { isAccessScope } from '@api/api-key/scope';
+import { API_KEY_SECRET } from '@api/api-key/secret';
+import { ErrorEnum } from '@api/error';
 
 export const generateApiKey = (namespace: string, scope: string): [null, ErrorEnum] | [string, null] => {
   if (!isAccessScope(scope)) {
