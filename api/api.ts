@@ -481,10 +481,9 @@ Bun.serve({
         const path = url.pathname.replace('/assets', '');
 
         try {
-          const file = Bun.file(join(import.meta.dir, './public/assets', path));
-          const exists = await file.exists();
+          const file = await getFile(join(import.meta.dir, './public/assets', path));
 
-          if (!exists) {
+          if (file === null) {
             return new Response('Not Found', { status: 404 });
           }
 
@@ -501,17 +500,24 @@ Bun.serve({
     },
 
     '/*': {
-      GET: () => {
-        return new Response(Bun.file(join(import.meta.dir, './public/index.html')), {
-          headers: {
-            Location: '/app',
-            'Content-Type': 'text/html',
-          },
-        });
-      },
+      GET: () => new Response(INDEX_HTML, { headers: { Location: '/app', 'Content-Type': 'text/html' } }),
     },
   },
 });
+
+const getFile = async (path: string) => {
+  const file = Bun.file(path);
+  const exists = await file.exists();
+
+  return exists ? file : null;
+};
+
+const INDEX_HTML = await getFile(join(import.meta.dir, './public/index.html'));
+
+if (INDEX_HTML === null) {
+  console.error('Index HTML file not found');
+  process.exit(1);
+}
 
 const JOB_ID_REGEX = /^[a-zA-Z0-9-_]+$/;
 const JOB_ID_MAX_LENGTH = 64;
