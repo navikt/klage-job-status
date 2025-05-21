@@ -3,6 +3,7 @@ import { AcceptType, getAcceptValues, preferred } from '@api/accept';
 import { generateApiKey } from '@api/api-key/create';
 import { AccessScope } from '@api/api-key/scope';
 import { verifyApiKey } from '@api/api-key/verify';
+import { IS_DEPLOYED } from '@api/env';
 import { ErrorEnum, getErrorResponse } from '@api/error';
 import { formatJobKey } from '@api/job-key';
 import { JOBS } from '@api/jobs';
@@ -514,7 +515,7 @@ const getFile = async (path: string) => {
 
 const INDEX_HTML = await getFile(join(import.meta.dir, './public/index.html'));
 
-if (INDEX_HTML === null) {
+if (IS_DEPLOYED && INDEX_HTML === null) {
   console.error('Index HTML file not found');
   process.exit(1);
 }
