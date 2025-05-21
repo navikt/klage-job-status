@@ -107,7 +107,7 @@ export const JobsList = () => {
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(400px,1fr))] gap-4">
           {filteredAndSortedJobs.map((job) => (
-            <JobCard key={`${job.name ?? 'unnamed'}-${job.created}-${job.status}`} job={job} />
+            <JobCard key={`${job.namespace}:${job.id}`} job={job} />
           ))}
         </div>
       )}
