@@ -21,7 +21,7 @@ export enum SortBy {
 const SORT_BY_VALUES = Object.values(SortBy);
 export const isSortBy = (value: unknown): value is SortBy => SORT_BY_VALUES.includes(value as SortBy);
 
-export const DEFAULT_SORT_BY = SortBy.Modified;
+export const DEFAULT_SORT_BY = SortBy.Created;
 const getSortByQuery = (sortBy: string | null): SortBy => (isSortBy(sortBy) ? sortBy : DEFAULT_SORT_BY);
 
 const DEFAULT_SORT_ORDER = SortOrder.Descending;
