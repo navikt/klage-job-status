@@ -1,5 +1,5 @@
-import { GetNamespaceApiKeys } from '@app/components/ApiKeys';
 import { JobsList } from '@app/components/JobsList/JobsList';
+import { CreateApiKeys } from '@app/components/api-keys/CreateApiKeys';
 import { JobsProvider } from '@app/context/JobsContext';
 import { useNamespaces } from '@app/context/NamespaceContext';
 import { Button, HStack, Heading, VStack } from '@navikt/ds-react';
@@ -29,7 +29,7 @@ export const MainContent = () => {
             </Button>
           ))}
 
-          <GetNamespaceApiKeys />
+          <CreateApiKeys />
         </HStack>
       </VStack>
     );
