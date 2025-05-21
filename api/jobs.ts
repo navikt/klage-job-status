@@ -80,8 +80,14 @@ class Jobs {
       keysToDelete.push(key);
     }
 
+    if (keysToDelete.length === 0) {
+      console.debug('No invalid jobs found');
+      return;
+    }
+
+    console.warn(`Deleting invalid jobs: ${keysToDelete.join(', ')}`);
     // Delete all invalid jobs.
-    await this.#client.del(keys);
+    await this.#client.del(keysToDelete);
 
     // Publish delete events for all invalid jobs.
     const publishPromises: Promise<void>[] = [];
