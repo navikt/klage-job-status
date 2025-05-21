@@ -1,4 +1,5 @@
 import { NamespaceSelector } from '@app/components/NamespaceSelector';
+import { ShowApiKeys } from '@app/components/api-keys/ShowApiKeys';
 import { useTheme, useToggleTheme } from '@app/hooks/theme';
 import { MoonIcon, SunIcon } from '@navikt/aksel-icons';
 import { Box, Button, HStack, Heading } from '@navikt/ds-react';
@@ -16,6 +17,8 @@ export const Header = () => (
       <Heading as="a" level="1" size="medium" href="/" className="mr-auto">
         Job Status Dashboard
       </Heading>
+
+      <ShowApiKeys />
 
       <NamespaceSelector />
 
