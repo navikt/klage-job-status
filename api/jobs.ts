@@ -154,8 +154,17 @@ class Jobs {
         this.#publish({ job, eventType: JobEventType.CREATED }),
       ]);
 
-      setTimeout(() => {
-        this.#update(job, Status.TIMEOUT);
+      setTimeout(async () => {
+        console.debug(`Job "${key}" timed out after ${job.timeout} seconds`);
+
+        const [, error] = await this.#update(job, Status.TIMEOUT);
+
+        if (error !== null) {
+          console.error(`Failed to update job "${key}" to TIMEOUT`);
+          return;
+        }
+
+        console.debug(`Set job "${key}" status to TIMEOUT`);
       }, job.timeout * 1000);
 
       return [job, null];
