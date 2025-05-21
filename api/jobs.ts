@@ -148,6 +148,10 @@ class Jobs {
         this.#publish({ job, eventType: JobEventType.CREATED }),
       ]);
 
+      setTimeout(() => {
+        this.#update(job, Status.TIMEOUT);
+      }, job.timeout * 1000);
+
       return [job, null];
     } catch (error) {
       console.error({ msg: 'Error setting job data', error });
