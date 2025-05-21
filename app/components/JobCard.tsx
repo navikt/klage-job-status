@@ -22,7 +22,7 @@ export const JobCard: FC<JobCardProps> = ({ job }) => {
       borderColor={STATUS_BORDER_COLOR.get(status)}
       padding="5"
       shadow="dialog"
-      className="hover:-translate-y-0.5 text-left transition-[translate,background-color] duration-200 hover:bg-ax-bg-accent-moderate-a"
+      className="hover:-translate-y-0.5 text-left transition-[translate] duration-200 hover:bg-ax-bg-accent-moderate-a"
     >
       <HStack marginBlock="0 3" align="center" justify="space-between">
         <Heading level="3" size="xsmall" className="font-normal text-text-subtle">
