@@ -1,4 +1,5 @@
 import { StatusBadge } from '@app/components/StatusBadge';
+import { DeleteJob } from '@app/components/job-card/DeleteJob';
 import { formatDate, formatJobDuration, formatSeconds } from '@app/functions/format';
 import type { Job } from '@common/common';
 import { Status } from '@common/common';
@@ -11,7 +12,7 @@ interface JobCardProps {
 
 export const JobCard: FC<JobCardProps> = ({ job }) => {
   const status = useJobStatus(job);
-  const duration = useJobDuration(job);
+  const duration = useJobDuration(job, status);
 
   return (
     <Box.New
@@ -22,7 +23,9 @@ export const JobCard: FC<JobCardProps> = ({ job }) => {
       borderColor={STATUS_BORDER_COLOR.get(status)}
       padding="5"
       shadow="dialog"
-      className="hover:-translate-y-0.5 text-left transition-[translate] duration-200 hover:bg-ax-bg-accent-moderate-a"
+      position="relative"
+      overflow="hidden"
+      className="hover:-translate-y-0.5 group text-left transition-[translate] duration-200 hover:bg-ax-bg-accent-moderate-a"
     >
       <HStack marginBlock="0 3" align="center" justify="space-between">
         <Heading level="3" size="xsmall" className="font-normal text-text-subtle">
@@ -42,6 +45,16 @@ export const JobCard: FC<JobCardProps> = ({ job }) => {
         <JobDetail label="Duration">{duration}</JobDetail>
         <JobDetail label="Timeout">{formatSeconds(job.timeout)}</JobDetail>
       </div>
+
+      <Box.New
+        position="absolute"
+        bottom="0"
+        right="0"
+        padding="2"
+        className="opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+      >
+        <DeleteJob jobId={job.id} namespace={job.namespace} />
+      </Box.New>
     </Box.New>
   );
 };
@@ -55,7 +68,7 @@ const useJobStatus = (job: Job) => {
     }
 
     const interval = setInterval(() => {
-      if (job.created + job.timeout * 1000 < Date.now()) {
+      if (isExpired(job)) {
         clearInterval(interval);
         setStatus(Status.TIMEOUT);
         return;
@@ -68,16 +81,16 @@ const useJobStatus = (job: Job) => {
   return status;
 };
 
-const useJobDuration = (job: Job) => {
+const useJobDuration = (job: Job, status: Status) => {
   const [duration, setDuration] = useState(formatJobDuration(job));
 
   useEffect(() => {
-    if (job.status !== Status.RUNNING) {
+    if (status !== Status.RUNNING) {
       return;
     }
 
     const interval = setInterval(() => {
-      if (job.created + job.timeout * 1000 < Date.now()) {
+      if (isExpired(job)) {
         clearInterval(interval);
         return;
       }
@@ -86,14 +99,16 @@ const useJobDuration = (job: Job) => {
     }, 1_000);
 
     return () => clearInterval(interval);
-  }, [job]);
+  }, [job, status]);
 
-  if (job.status === Status.TIMEOUT) {
+  if (status === Status.TIMEOUT) {
     return formatSeconds(job.timeout);
   }
 
   return duration;
 };
+
+const isExpired = ({ created, timeout }: Job): boolean => created + timeout * 1000 < Date.now();
 
 interface JobDetailProps {
   label: string;
