@@ -5,7 +5,7 @@ import { JobCard } from '@app/components/job-card/JobCard';
 import { useJobs } from '@app/context/JobsContext';
 import { SortBy, SortOrder, useSearchParams } from '@app/hooks/query-state';
 import { Status } from '@common/common';
-import { Box, HGrid, HStack, Heading } from '@navikt/ds-react';
+import { Box, HGrid, HStack, Heading, VStack } from '@navikt/ds-react';
 import { useMemo } from 'react';
 
 const ALL_STATUS = 'ALL';
@@ -79,7 +79,7 @@ export const JobsList = () => {
   }
 
   return (
-    <section>
+    <VStack as="section" minHeight="100%" flexGrow="1">
       <HGrid marginBlock="0 6" gap="4" columns={{ '2xl': 4, xl: 4, lg: 4, md: 4, sm: 4, xs: 2 }}>
         <StatItem jobs={jobs}>Total Jobs</StatItem>
         <StatItem jobs={jobs} status={Status.RUNNING}>
@@ -100,7 +100,7 @@ export const JobsList = () => {
       </div>
 
       {filteredAndSortedJobs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-medium bg-bg-subtle p-8 text-center text-text-subtle">
+        <div className="mb-auto flex flex-col items-center justify-center rounded-medium bg-bg-subtle p-8 text-center text-text-subtle">
           <p>No jobs found matching your filters.</p>
           {searchText && <p>Try adjusting your search terms.</p>}
         </div>
@@ -111,6 +111,10 @@ export const JobsList = () => {
           ))}
         </ol>
       )}
-    </section>
+
+      <p className="mt-4 w-full self-end text-center text-ax-small text-ax-text-neutral-subtle italic">
+        Jobs are stored for 30 days after creation.
+      </p>
+    </VStack>
   );
 };
