@@ -27,17 +27,6 @@ export const JobsProvider = ({ namespace, children }: JobsProviderProps) => {
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const onJobCreated = useCallback((event: MessageEvent) => {
-    const job: unknown = JSON.parse(event.data);
-
-    if (!isJob(job)) {
-      console.error('Invalid job data:', job);
-      return;
-    }
-
-    setJobs((prevJobs) => [...prevJobs, job].toSorted((a, b) => b.modified - a.modified));
-  }, []);
-
   const onJobUpdated = useCallback((event: MessageEvent) => {
     const job: unknown = JSON.parse(event.data);
 
@@ -49,13 +38,15 @@ export const JobsProvider = ({ namespace, children }: JobsProviderProps) => {
     setJobs((prevJobs) => {
       const jobIndex = prevJobs.findIndex(({ id, namespace }) => id === job.id && namespace === job.namespace);
 
-      if (jobIndex !== -1) {
-        const updatedJobs = [...prevJobs];
-        updatedJobs[jobIndex] = job;
-        return updatedJobs.toSorted((a, b) => b.modified - a.modified);
+      // If the job doesn't exist, add it to the list.
+      if (jobIndex === -1) {
+        return [...prevJobs, job].toSorted((a, b) => b.modified - a.modified);
       }
 
-      return [...prevJobs, job].toSorted((a, b) => b.modified - a.modified);
+      // If the job exists, update it in the list.
+      const updatedJobs = [...prevJobs];
+      updatedJobs[jobIndex] = job;
+      return updatedJobs.toSorted((a, b) => b.modified - a.modified);
     });
   }, []);
 
@@ -73,7 +64,7 @@ export const JobsProvider = ({ namespace, children }: JobsProviderProps) => {
   useEffect(() => {
     const sse = new EventSource(`/api/jobs/${namespace}`);
 
-    sse.addEventListener(JobEventType.CREATED, onJobCreated);
+    sse.addEventListener(JobEventType.CREATED, onJobUpdated);
     sse.addEventListener(JobEventType.UPDATED, onJobUpdated);
     sse.addEventListener(JobEventType.DELETED, onJobDeleted);
 
@@ -90,7 +81,7 @@ export const JobsProvider = ({ namespace, children }: JobsProviderProps) => {
     return () => {
       sse.close();
     };
-  }, [namespace, onJobCreated, onJobUpdated, onJobDeleted]);
+  }, [namespace, onJobUpdated, onJobDeleted]);
 
   return <JobsContext.Provider value={{ jobs, isLoading, error, namespace }}>{children}</JobsContext.Provider>;
 };
