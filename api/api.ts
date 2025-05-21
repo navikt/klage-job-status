@@ -476,15 +476,27 @@ Bun.serve({
     },
 
     '/assets/*': {
-      GET: (req) => {
+      GET: async (req) => {
         const url = new URL(req.url);
         const path = url.pathname.replace('/assets', '');
 
-        return new Response(Bun.file(join(import.meta.dir, './public/assets', path)), {
-          headers: {
-            'Content-Type': MIME_TYPES[extname(path)] || 'application/octet-stream',
-          },
-        });
+        try {
+          const file = Bun.file(join(import.meta.dir, './public/assets', path));
+          const exists = await file.exists();
+
+          if (!exists) {
+            return new Response('Not Found', { status: 404 });
+          }
+
+          return new Response(file, {
+            headers: {
+              'Content-Type': MIME_TYPES[extname(path)] ?? 'application/octet-stream',
+            },
+          });
+        } catch (error) {
+          console.error('Error reading asset file:', error);
+          return new Response('Internal Server Error', { status: 500 });
+        }
       },
     },
 
