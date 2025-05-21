@@ -32,6 +32,8 @@ export const JobCard: FC<JobCardProps> = ({ job }) => {
         <StatusBadge {...job} status={status} />
       </HStack>
 
+      <div className="mb-4 font-mono text-sm">ID: {job.id}</div>
+
       <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
         <JobDetail label="Created">{formatDate(job.created)}</JobDetail>
         <JobDetail label={job.status === Status.RUNNING ? 'Updated' : 'Ended'}>
