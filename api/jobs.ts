@@ -33,7 +33,73 @@ class Jobs {
   public async init() {
     await Promise.all([this.#subscribeClient.connect(), this.#client.connect()]);
     console.debug('Connected to Valkey Data and Subscribe clients');
+    this.#clean();
   }
+
+  #clean = async () => {
+    // Clean up invalid jobs
+    const keys = await this.#client.keys('*');
+    const jobs = await this.#client.mGet(keys);
+
+    let index = -1;
+    const keysToDelete: string[] = [];
+
+    for (const job of jobs) {
+      index++;
+
+      if (job === null) {
+        continue;
+      }
+
+      try {
+        const parsedJob: unknown = JSON.parse(job);
+
+        if (isJob(parsedJob)) {
+          // Job is valid. Nothing to clean up.
+          continue;
+        }
+      } catch (error) {
+        // Job is not valid JSON. Log the error and delete the job.
+        console.error(`Error parsing job ${job}`, error);
+      }
+
+      const key = keys[index];
+
+      if (key === undefined) {
+        console.error(`Missing key for invalid job ${job}`);
+        continue;
+      }
+
+      // Add the key to the list of keys to delete.
+      keysToDelete.push(key);
+    }
+
+    // Delete all invalid jobs.
+    await this.#client.del(keys);
+
+    // Publish delete events for all invalid jobs.
+    const publishPromises: Promise<void>[] = [];
+
+    for (const key of keysToDelete) {
+      const [namespace, id] = key.split(':');
+
+      if (namespace === undefined || id === undefined) {
+        console.error(`Invalid key format: "${key}"`);
+        continue;
+      }
+
+      publishPromises.push(this.#publish({ eventType: JobEventType.DELETED, job: { id, namespace } }));
+    }
+
+    await Promise.all(publishPromises);
+
+    if (keysToDelete.length === 0) {
+      console.debug('No invalid jobs found');
+      return;
+    }
+
+    console.debug(`Deleted ${keysToDelete.length} invalid jobs`);
+  };
 
   public async create(
     namespace: string,
