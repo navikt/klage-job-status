@@ -9,7 +9,7 @@ export const formatDate = (timestamp: number | null) => {
   return format(timestamp, 'dd.MM.yyyy HH:mm:ss');
 };
 
-export const formatJobDuration = ({ created, ended }: Job) =>
+export const formatJobDuration = ({ created, ended }: Pick<Job, 'created' | 'ended'>) =>
   formatDuration(intervalToDuration({ start: created, end: ended ?? Date.now() }));
 
 export const formatSeconds = (duration: number) =>

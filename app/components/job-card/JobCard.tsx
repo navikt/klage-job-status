@@ -1,6 +1,9 @@
 import { StatusBadge } from '@app/components/StatusBadge';
 import { DeleteJob } from '@app/components/job-card/DeleteJob';
-import { formatDate, formatJobDuration, formatSeconds } from '@app/functions/format';
+import { JobDetail } from '@app/components/job-card/Detail';
+import { Duration } from '@app/components/job-card/Duration';
+import { isExpired } from '@app/components/job-card/expired';
+import { formatDate, formatSeconds } from '@app/functions/format';
 import type { Job } from '@common/common';
 import { Status } from '@common/common';
 import { Box, HStack, Heading } from '@navikt/ds-react';
@@ -12,7 +15,9 @@ interface JobCardProps {
 
 export const JobCard: FC<JobCardProps> = ({ job }) => {
   const status = useJobStatus(job);
-  const duration = useJobDuration(job, status);
+
+  console.log('job.status', job.status);
+  console.log('status', status);
 
   return (
     <Box.New
@@ -42,7 +47,7 @@ export const JobCard: FC<JobCardProps> = ({ job }) => {
         <JobDetail label={job.status === Status.RUNNING ? 'Updated' : 'Ended'}>
           {formatDate(job.ended ?? job.modified)}
         </JobDetail>
-        <JobDetail label="Duration">{duration}</JobDetail>
+        <Duration key="duration" status={status} created={job.created} timeout={job.timeout} ended={job.ended} />
         <JobDetail label="Timeout">{formatSeconds(job.timeout)}</JobDetail>
       </div>
 
@@ -68,7 +73,7 @@ const useJobStatus = (job: Job) => {
     }
 
     const interval = setInterval(() => {
-      if (isExpired(job)) {
+      if (isExpired(job.created, job.timeout)) {
         clearInterval(interval);
         setStatus(Status.TIMEOUT);
         return;
@@ -78,49 +83,12 @@ const useJobStatus = (job: Job) => {
     return () => clearInterval(interval);
   }, [job]);
 
-  return status;
-};
-
-const useJobDuration = (job: Job, status: Status) => {
-  const [duration, setDuration] = useState(formatJobDuration(job));
-
-  useEffect(() => {
-    if (status !== Status.RUNNING) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      if (isExpired(job)) {
-        clearInterval(interval);
-        return;
-      }
-
-      setDuration(formatJobDuration(job));
-    }, 1_000);
-
-    return () => clearInterval(interval);
-  }, [job, status]);
-
-  if (status === Status.TIMEOUT) {
-    return formatSeconds(job.timeout);
+  if (job.status !== Status.RUNNING) {
+    return job.status;
   }
 
-  return duration;
+  return status;
 };
-
-const isExpired = ({ created, timeout }: Job): boolean => created + timeout * 1000 < Date.now();
-
-interface JobDetailProps {
-  label: string;
-  children: React.ReactNode;
-}
-
-const JobDetail = ({ label, children }: JobDetailProps) => (
-  <section className="flex flex-col gap-1">
-    <span className="font-bold text-small text-text-subtle">{label}:</span>
-    <span className="text-small text-text-default">{children}</span>
-  </section>
-);
 
 const STATUS_BORDER_COLOR: Map<Status, ComponentProps<typeof Box.New>['borderColor']> = new Map([
   [Status.SUCCESS, 'success'],
