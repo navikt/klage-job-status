@@ -34,7 +34,14 @@ interface CompletedJob extends BaseJob {
 export type Job = RunningJob | CompletedJob;
 
 export const isJob = (data: unknown): data is Job =>
-  data !== null && typeof data === 'object' && 'status' in data && 'created' in data;
+  data !== null &&
+  typeof data === 'object' &&
+  'id' in data &&
+  'namespace' in data &&
+  'status' in data &&
+  'created' in data &&
+  'modified' in data &&
+  'timeout' in data;
 
 export const validateLength = (value: string, min: number, max: number): boolean =>
   value.length > min && value.length < max;
