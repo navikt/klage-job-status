@@ -1,5 +1,4 @@
 import { ApiKeys } from '@app/components/api-keys/ApiKeys';
-import { useApiKeys } from '@app/components/api-keys/use-api-keys';
 import { NAMESPACE_MAX_LENGTH, NAMESPACE_MIN_LENGTH, NAMESPACE_REGEX } from '@common/common';
 import { PlusIcon } from '@navikt/aksel-icons';
 import { Alert, BodyShort, Button, List, Modal, TextField } from '@navikt/ds-react';
@@ -8,7 +7,6 @@ import { useRef, useState } from 'react';
 export const CreateApiKeys = () => {
   const modalRef = useRef<HTMLDialogElement>(null);
   const [namespace, setNamespace] = useState<string>('');
-  const { readKey, writeKey, isLoading } = useApiKeys(namespace);
 
   return (
     <>
@@ -54,7 +52,7 @@ export const CreateApiKeys = () => {
             <List.Item>Namespace can only contain lowercase letters, numbers, dashes, and underscores.</List.Item>
           </List>
 
-          <ApiKeys readKey={readKey} writeKey={writeKey} isLoading={isLoading} />
+          <ApiKeys namespace={namespace} />
         </Modal.Body>
 
         <Modal.Footer>
