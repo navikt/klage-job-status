@@ -105,11 +105,11 @@ export const JobsList = () => {
           {searchText && <p>Try adjusting your search terms.</p>}
         </div>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(400px,1fr))] gap-4">
+        <ol className="mb-auto grid grid-cols-[repeat(auto-fill,minmax(400px,1fr))] gap-4">
           {filteredAndSortedJobs.map((job) => (
             <JobCard key={`${job.namespace}:${job.id}`} job={job} />
           ))}
-        </div>
+        </ol>
       )}
     </section>
   );
