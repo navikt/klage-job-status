@@ -21,6 +21,7 @@ export const JobCard: FC<JobCardProps> = ({ job }) => {
 
   return (
     <Box.New
+      as="li"
       background="default"
       width="100%"
       borderRadius="large"
