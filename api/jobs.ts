@@ -39,6 +39,12 @@ class Jobs {
   #clean = async () => {
     // Clean up invalid jobs
     const keys = await this.#client.keys('*');
+
+    if (keys.length === 0) {
+      console.debug('No jobs to clean up');
+      return;
+    }
+
     const jobs = await this.#client.mGet(keys);
 
     let index = -1;
