@@ -413,6 +413,28 @@ Bun.serve({
       },
     },
 
+    '/api/namespaces/:namespace/jobs/:jobId': {
+      DELETE: async (req) => {
+        const [navIdent, authError] = authenticate(req);
+
+        if (authError !== null) {
+          return getErrorResponse(authError);
+        }
+
+        const { namespace, jobId } = req.params;
+
+        const error = await JOBS.delete(namespace, jobId);
+
+        if (error !== null) {
+          return getErrorResponse(error);
+        }
+
+        console.info(`${navIdent} deleted job "${formatJobKey({ namespace, id: jobId })}"`);
+
+        return new Response('Job deleted', { status: 200 });
+      },
+    },
+
     '/api/namespaces/:namespace/keys': {
       GET: (req) => {
         const [navIdent, authError] = authenticate(req);

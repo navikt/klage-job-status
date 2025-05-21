@@ -1,7 +1,7 @@
-import { JobCard } from '@app/components/JobCard';
 import { Sorting } from '@app/components/JobsList/Sorting';
 import { StatItem } from '@app/components/JobsList/StatItem';
 import { SearchFilter } from '@app/components/SearchFilter';
+import { JobCard } from '@app/components/job-card/JobCard';
 import { useJobs } from '@app/context/JobsContext';
 import { SortBy, SortOrder, useSearchParams } from '@app/hooks/query-state';
 import { Status } from '@common/common';
