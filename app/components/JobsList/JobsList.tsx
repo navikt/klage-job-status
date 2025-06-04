@@ -80,7 +80,7 @@ export const JobsList = () => {
 
   return (
     <VStack as="section" minHeight="100%" flexGrow="1">
-      <HGrid marginBlock="0 6" gap="4" columns={{ '2xl': 4, xl: 4, lg: 4, md: 4, sm: 4, xs: 2 }}>
+      <HGrid marginBlock="0 6" gap="4" columns={{ '2xl': 5, xl: 5, lg: 5, md: 5, sm: 5, xs: 2 }}>
         <StatItem jobs={jobs}>Total Jobs</StatItem>
         <StatItem jobs={jobs} status={Status.RUNNING}>
           Running
@@ -90,6 +90,9 @@ export const JobsList = () => {
         </StatItem>
         <StatItem jobs={jobs} status={Status.FAILED}>
           Failed
+        </StatItem>
+        <StatItem jobs={jobs} status={Status.TIMEOUT}>
+          Timeout
         </StatItem>
       </HGrid>
 
