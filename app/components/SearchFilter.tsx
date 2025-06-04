@@ -39,6 +39,9 @@ export const SearchFilter = ({ statusFilter, setStatusFilter, onSearch }: Search
         <ToggleGroup.Item value={Status.FAILED} className="capitalize">
           {Status.FAILED.toLowerCase()}
         </ToggleGroup.Item>
+        <ToggleGroup.Item value={Status.TIMEOUT} className="capitalize">
+          {Status.TIMEOUT.toLowerCase()}
+        </ToggleGroup.Item>
       </ToggleGroup>
 
       <Search

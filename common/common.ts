@@ -5,7 +5,7 @@ export enum Status {
   TIMEOUT = 'TIMEOUT',
 }
 
-const STATUSES = [Status.SUCCESS, Status.FAILED, Status.RUNNING];
+const STATUSES = Object.values(Status);
 
 export const isStatus = (status: unknown): status is Status => STATUSES.includes(status as Status);
 
