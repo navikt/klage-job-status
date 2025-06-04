@@ -16,9 +16,6 @@ interface JobCardProps {
 export const JobCard: FC<JobCardProps> = ({ job }) => {
   const status = useJobStatus(job);
 
-  console.log('job.status', job.status);
-  console.log('status', status);
-
   return (
     <Box.New
       as="li"
