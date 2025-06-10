@@ -80,7 +80,15 @@ export const handleJob = async (job: Job) => {
     [h('Ended'), job.ended ? format(job.ended, 'dd-MM-yyyy HH:mm:ss') : 'N/A'],
   ]);
 
-  summary.addLink('See job status', BASE_URL);
+  const params = new URLSearchParams();
+  params.set('namespace', job.namespace);
+  params.set('status', job.status);
+
+  if (job.name !== undefined) {
+    params.set('name', encodeURIComponent(job.name));
+  }
+
+  summary.addLink('See job status', `${BASE_URL}?${params.toString()}`);
 
   if (IS_GITHUB_ACTION) {
     await summary.write();
