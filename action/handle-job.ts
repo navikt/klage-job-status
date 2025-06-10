@@ -1,6 +1,6 @@
 import { BASE_URL, FAIL, FAIL_ON_UNKNOWN, IS_GITHUB_ACTION } from '@action/input';
 import { formatJobName } from '@action/job-name';
-import { info, setFailed, setOutput, summary } from '@actions/core';
+import { ExitCode, info, setFailed, setOutput, summary } from '@actions/core';
 import type { SummaryTableCell } from '@actions/core/lib/summary';
 import { type Job, Status } from '@common/common';
 import { format, formatDuration, intervalToDuration } from 'date-fns';
@@ -13,9 +13,12 @@ export const handleJob = async (job: Job) => {
 
   summary.addSeparator();
 
+  let exitCode: ExitCode = ExitCode.Failure;
+
   switch (job.status) {
     case Status.SUCCESS: {
       setOutput('status', 'success');
+      exitCode = ExitCode.Success;
       summary.addHeading(`Job "${name(job.name)}" succeeded`, 2);
       break;
     }
@@ -23,10 +26,12 @@ export const handleJob = async (job: Job) => {
     case Status.FAILED: {
       if (FAIL) {
         setOutput('status', 'failed');
+        exitCode = ExitCode.Failure;
         summary.addHeading(`Job "${name(job.name)}" failed`, 2);
         setFailed('Job has failed');
       } else {
         setOutput('status', 'success');
+        exitCode = ExitCode.Success;
         summary.addHeading(`Job "${name(job.name)}" failed (ignored)`, 2);
         summary.addDetails(
           'Failed job ignored',
@@ -39,10 +44,12 @@ export const handleJob = async (job: Job) => {
     case Status.TIMEOUT: {
       if (FAIL) {
         setOutput('status', 'timeout');
+        exitCode = ExitCode.Failure;
         summary.addHeading(`Job "${name(job.name)}" timed out`, 2);
         setFailed('Job has timed out');
       } else {
         setOutput('status', 'success');
+        exitCode = ExitCode.Success;
         summary.addHeading(`Job "${name(job.name)}" timed out (ignored)`, 2);
         summary.addDetails(
           'Timed out job ignored',
@@ -54,6 +61,7 @@ export const handleJob = async (job: Job) => {
 
     case Status.RUNNING: {
       setOutput('status', FAIL_ON_UNKNOWN ? 'failed' : 'success');
+      exitCode = FAIL_ON_UNKNOWN ? ExitCode.Failure : ExitCode.Success;
       summary.addHeading(`Job "${name(job.name)}" is running`, 2);
       break;
     }
@@ -79,6 +87,8 @@ export const handleJob = async (job: Job) => {
   } else {
     console.info(summary.stringify());
   }
+
+  process.exit(exitCode ?? ExitCode.Success);
 };
 
 const name = (name: string | undefined): string => (name === undefined ? '<Unnamed>' : name);
