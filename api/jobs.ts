@@ -1,5 +1,8 @@
+import type { Context } from '@api/context';
 import { ErrorEnum } from '@api/error';
 import { formatJobKey, validateJobKey } from '@api/job-key';
+import { LOGS } from '@api/logging';
+import { getSpanId, getTraceId } from '@api/trace-id';
 import type { CreateJobInput } from '@api/types';
 import { type Job, type JobEvent, JobEventType, type JobKey, Status, isJob, isJobEvent } from '@common/common';
 import { type RedisClientType, createClient } from 'redis';
@@ -17,6 +20,9 @@ class Jobs {
   #client: RedisClientType;
   #subscribeClient: RedisClientType;
 
+  #traceId = getTraceId();
+  #spanId = getSpanId();
+
   constructor() {
     this.#client = createClient({
       url: VALKEY_URI,
@@ -24,15 +30,23 @@ class Jobs {
       password: VALKEY_PASSWORD,
       pingInterval: 3_000,
     });
-    this.#client.on('error', (error) => console.error({ msg: 'Valkey Data Client Error', error }));
 
+    this.#client.on('error', (error) =>
+      LOGS.error('Valkey Data Client Error', this.#traceId, this.#spanId, 'valkey', {
+        error: error instanceof Error ? error : 'Unknown error',
+      }),
+    );
     this.#subscribeClient = this.#client.duplicate();
-    this.#subscribeClient.on('error', (error) => console.error({ msg: 'Valkey Subscribe Client Error', error }));
+    this.#subscribeClient.on('error', (error) =>
+      LOGS.error('Valkey Subscribe Client Error', this.#traceId, this.#spanId, 'valkey', {
+        error: error instanceof Error ? error : 'Unknown error',
+      }),
+    );
   }
 
   public async init() {
     await Promise.all([this.#subscribeClient.connect(), this.#client.connect()]);
-    console.debug('Connected to Valkey Data and Subscribe clients');
+    LOGS.debug('Connected to Valkey Data and Subscribe clients', this.#traceId, this.#spanId, 'init');
     this.#clean();
   }
 
@@ -41,7 +55,7 @@ class Jobs {
     const keys = await this.#client.keys('*');
 
     if (keys.length === 0) {
-      console.debug('No jobs to clean up');
+      LOGS.debug('No jobs to clean up', this.#traceId, this.#spanId, 'clean');
       return;
     }
 
@@ -66,13 +80,15 @@ class Jobs {
         }
       } catch (error) {
         // Job is not valid JSON. Log the error and delete the job.
-        console.error(`Error parsing job ${job}`, error);
+        LOGS.error(`Error parsing job ${job}`, this.#traceId, this.#spanId, 'clean', {
+          error: error instanceof Error ? error : 'Unknown error',
+        });
       }
 
       const key = keys[index];
 
       if (key === undefined) {
-        console.error(`Missing key for invalid job ${job}`);
+        LOGS.error(`Missing key for invalid job ${job}`, this.#traceId, this.#spanId, 'clean');
         continue;
       }
 
@@ -81,11 +97,11 @@ class Jobs {
     }
 
     if (keysToDelete.length === 0) {
-      console.debug('No invalid jobs found');
+      LOGS.debug('No invalid jobs found', this.#traceId, this.#spanId, 'clean');
       return;
     }
 
-    console.warn(`Deleting invalid jobs: ${keysToDelete.join(', ')}`);
+    LOGS.warn(`Deleting invalid jobs: ${keysToDelete.join(', ')}`, this.#traceId, this.#spanId, 'clean');
     // Delete all invalid jobs.
     await this.#client.del(keysToDelete);
 
@@ -96,7 +112,7 @@ class Jobs {
       const [namespace, id] = key.split(':');
 
       if (namespace === undefined || id === undefined) {
-        console.error(`Invalid key format: "${key}"`);
+        LOGS.error(`Invalid key format: "${key}"`, this.#traceId, this.#spanId, 'clean');
         continue;
       }
 
@@ -106,19 +122,20 @@ class Jobs {
     await Promise.all(publishPromises);
 
     if (keysToDelete.length === 0) {
-      console.debug('No invalid jobs found');
+      LOGS.debug('No invalid jobs found', this.#traceId, this.#spanId, 'clean');
       return;
     }
 
-    console.debug(`Deleted ${keysToDelete.length} invalid jobs`);
+    LOGS.debug(`Deleted ${keysToDelete.length} invalid jobs`, this.#traceId, this.#spanId, 'clean');
   };
 
   public async create(
+    log: Context,
     namespace: string,
     jobId: string,
     input?: CreateJobInput,
   ): Promise<[Job, null] | [null, ErrorEnum]> {
-    const isValid = validateJobKey(namespace, jobId);
+    const isValid = validateJobKey(log, namespace, jobId);
 
     if (!isValid) {
       return [null, ErrorEnum.INVALID_JOB_ID];
@@ -155,45 +172,50 @@ class Jobs {
       ]);
 
       setTimeout(async () => {
-        console.debug(`Job "${key}" timed out after ${job.timeout} seconds`);
+        log.debug(`Job "${key}" timed out after ${job.timeout} seconds`, { jobId, namespace });
 
-        const [, error] = await this.#update(job, Status.TIMEOUT);
+        const [, error] = await this.#update(log, job, Status.TIMEOUT);
 
         if (error !== null) {
-          console.error(`Failed to update job "${key}" to TIMEOUT`);
+          log.error(`Failed to update job "${key}" to TIMEOUT`, { jobId, namespace, error });
           return;
         }
 
-        console.debug(`Set job "${key}" status to TIMEOUT`);
+        log.debug(`Set job "${key}" status to TIMEOUT`, { jobId, namespace });
       }, job.timeout * 1000);
 
       return [job, null];
     } catch (error) {
-      console.error({ msg: 'Error setting job data', error });
+      log.error('Error setting job data', {
+        jobId,
+        namespace,
+        error: error instanceof Error ? error : 'Unknown error',
+      });
+
       return [null, ErrorEnum.UNKNOWN];
     }
   }
 
-  #get = async (jobKey: JobKey): Promise<[Job, null] | [null, ErrorEnum]> => {
+  #get = async (log: Context, jobKey: JobKey): Promise<[Job, null] | [null, ErrorEnum]> => {
     const key = formatJobKey(jobKey);
     const fetchedJob = await this.#client.get(key);
 
     if (fetchedJob === null) {
-      console.warn(`Job "${key}" not found`);
+      log.warn(`Job "${key}" not found`);
       return [null, ErrorEnum.NOT_FOUND];
     }
 
     const job: unknown = JSON.parse(fetchedJob);
 
     if (!isJob(job)) {
-      console.error(`Invalid job ${key}\n${fetchedJob}`);
-      this.#delete(jobKey);
+      log.error(`Invalid job ${key}\n${fetchedJob}`);
+      this.#delete(log, jobKey);
       return [null, ErrorEnum.NOT_FOUND];
     }
 
     if (shouldSetTimedOut(job)) {
-      console.warn(`Job "${key}" has timed out`);
-      const [expiredJob, updateError] = await this.#update(job, Status.TIMEOUT);
+      log.warn(`Job "${key}" has timed out`);
+      const [expiredJob, updateError] = await this.#update(log, job, Status.TIMEOUT);
 
       return updateError === null ? [expiredJob, null] : [null, updateError];
     }
@@ -201,16 +223,16 @@ class Jobs {
     return [job, null];
   };
 
-  public async get(namespace: string, jobId: string): Promise<[Job, null] | [null, ErrorEnum]> {
+  public async get(log: Context, namespace: string, jobId: string): Promise<[Job, null] | [null, ErrorEnum]> {
     if (jobId.length === 0 || namespace.length === 0) {
-      console.debug(`Tried to get job with invalid ID or namespace - "${jobId}" "${namespace}"`);
+      log.debug(`Tried to get job with invalid ID or namespace - "${jobId}" "${namespace}"`);
       return [null, ErrorEnum.INVALID_JOB_ID];
     }
 
-    return await this.#get({ id: jobId, namespace });
+    return await this.#get(log, { id: jobId, namespace });
   }
 
-  public async getAll(namespace: string): Promise<Job[]> {
+  public async getAll(log: Context, namespace: string): Promise<Job[]> {
     const keys = await this.#client.keys(`${namespace}:*`);
 
     if (keys.length === 0) {
@@ -229,12 +251,12 @@ class Jobs {
       const parsedJob: unknown = JSON.parse(job);
 
       if (!isJob(parsedJob)) {
-        console.error(`Invalid job ${job}`);
+        log.error(`Invalid job ${job}`);
         continue;
       }
 
       if (shouldSetTimedOut(parsedJob)) {
-        const [expiredJob, updateError] = await this.#update(parsedJob, Status.TIMEOUT);
+        const [expiredJob, updateError] = await this.#update(log, parsedJob, Status.TIMEOUT);
 
         if (updateError !== null) {
           continue;
@@ -250,7 +272,7 @@ class Jobs {
     return parsedJobs;
   }
 
-  async #update(existing: Job, inputStatus: Status): Promise<[Job, null] | [null, ErrorEnum]> {
+  async #update(log: Context, existing: Job, inputStatus: Status): Promise<[Job, null] | [null, ErrorEnum]> {
     const alreadyEnded = existing.ended !== null;
 
     const key = formatJobKey(existing);
@@ -260,7 +282,7 @@ class Jobs {
         return [existing, null];
       }
 
-      console.warn(
+      log.warn(
         `Failed to update job "${key}" from status "${existing.status}" to "${inputStatus}" - ${ErrorEnum.ALREADY_ENDED}`,
       );
       return [null, ErrorEnum.ALREADY_ENDED];
@@ -282,55 +304,72 @@ class Jobs {
         this.#publish({ job: updatedJob, eventType: JobEventType.UPDATED }),
       ]);
     } catch (error) {
-      console.error('Error updating job data', error);
+      const { id: jobId, namespace } = existing;
+      log.error('Error updating job data', {
+        jobId,
+        namespace,
+        error: error instanceof Error ? error : 'Unknown error',
+      });
+
       return [null, ErrorEnum.ERROR_UPDATING];
     }
 
     return [updatedJob, null];
   }
 
-  public async update(namespace: string, jobId: string, inputStatus: Status): Promise<[Job, null] | [null, ErrorEnum]> {
-    if (!validateJobKey(namespace, jobId)) {
+  public async update(
+    log: Context,
+    namespace: string,
+    jobId: string,
+    inputStatus: Status,
+  ): Promise<[Job, null] | [null, ErrorEnum]> {
+    if (!validateJobKey(log, namespace, jobId)) {
       return [null, ErrorEnum.INVALID_JOB_ID];
     }
 
     const jobKey: JobKey = { id: jobId, namespace };
 
-    const [existing, error] = await this.#get(jobKey);
+    const [existing, error] = await this.#get(log, jobKey);
 
     if (error !== null) {
       return [null, error];
     }
 
-    return await this.#update(existing, inputStatus);
+    return await this.#update(log, existing, inputStatus);
   }
 
-  #delete = async (jobKey: JobKey): Promise<ErrorEnum | null> => {
+  #delete = async (log: Context, jobKey: JobKey): Promise<ErrorEnum | null> => {
+    const { id: jobId, namespace } = jobKey;
     try {
       const key = formatJobKey(jobKey);
       await Promise.all([this.#client.del(key), this.#publish({ eventType: JobEventType.DELETED, job: jobKey })]);
-      console.debug(`Deleted job "${key}"`);
+      log.debug(`Deleted job "${key}"`, { jobId, namespace });
     } catch (error) {
-      console.error('Error deleting job data', error);
+      log.error('Error deleting job data', {
+        jobId,
+        namespace,
+        error: error instanceof Error ? error : 'Unknown error',
+      });
+
       return ErrorEnum.ERROR_DELETING;
     }
 
     return null;
   };
 
-  public async delete(namespace: string, jobId: string): Promise<ErrorEnum | null> {
-    const isValid = validateJobKey(namespace, jobId);
+  public async delete(log: Context, namespace: string, jobId: string): Promise<ErrorEnum | null> {
+    const isValid = validateJobKey(log, namespace, jobId);
 
     if (!isValid) {
       return ErrorEnum.INVALID_JOB_ID;
     }
 
-    return await this.#delete({ id: jobId, namespace });
+    return await this.#delete(log, { id: jobId, namespace });
   }
 
   #exists = async (jobKey: JobKey): Promise<boolean> => (await this.#client.exists(formatJobKey(jobKey))) !== 0;
 
-  public async getNamespaces(): Promise<string[]> {
+  public async getNamespaces(log: Context): Promise<string[]> {
     const keys = await this.#client.keys('*');
     const namespaces = new Set<string>();
 
@@ -338,14 +377,14 @@ class Jobs {
       const parts = key.split(':');
 
       if (parts.length < 2) {
-        console.warn(`Invalid key format: ${key}`);
+        log.warn(`Invalid key format: ${key}`);
         continue;
       }
 
       const [namespace] = parts;
 
       if (namespace === undefined) {
-        console.warn(`Invalid namespace in key: ${key}`);
+        log.warn(`Invalid namespace in key: ${key}`);
         continue;
       }
 
@@ -355,8 +394,8 @@ class Jobs {
     return Array.from(namespaces);
   }
 
-  public async subscribe(namespace: string, jobId: string, listener: Listener) {
-    const isValid = validateJobKey(namespace, jobId);
+  public async subscribe(log: Context, namespace: string, jobId: string, listener: Listener) {
+    const isValid = validateJobKey(log, namespace, jobId);
 
     if (!isValid) {
       return;
@@ -371,8 +410,8 @@ class Jobs {
     });
   }
 
-  public async unsubscribe(namespace: string, jobId: string) {
-    if (!validateJobKey(namespace, jobId)) {
+  public async unsubscribe(log: Context, namespace: string, jobId: string) {
+    if (!validateJobKey(log, namespace, jobId)) {
       return;
     }
 

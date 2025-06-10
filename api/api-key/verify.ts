@@ -1,33 +1,34 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { type AccessScope, validateScope } from '@api/api-key/scope';
 import { API_KEY_SECRET } from '@api/api-key/secret';
+import type { Context } from '@api/context';
 import { ErrorEnum } from '@api/error';
 
 /**
- * Verify the API key.
- * @example klage:read.MU71PJn99JCV2a2py6uQw3_aL7I6YSH_Dd3HLAhr5WM
- * @param apiKey - The API key to verify.
+ * Verify the API key in the request headers.
  * @param requiredScope - The required scope for the API key.
- * @param requiredNamespace - The required namespace for the API key. If no namespace is required, any namespace is valid.
- * @returns boolean - True if the API key is valid, false otherwise.
  */
-export const verifyApiKey = (req: Request, requiredScope: AccessScope): [string, null] | [null, ErrorEnum] => {
+export const verifyApiKey = (
+  log: Context,
+  req: Request,
+  requiredScope: AccessScope,
+): [string, null] | [null, ErrorEnum] => {
   const apiKey = req.headers.get('API_KEY');
 
   if (apiKey === null) {
-    console.warn('API_KEY header is missing');
+    log.warn('API_KEY header is missing');
     return [null, ErrorEnum.UNAUTHENTICATED];
   }
 
   const [key, signature] = apiKey.split('.');
 
   if (key === undefined) {
-    console.warn(`API key is malformed "${apiKey}"`);
+    log.warn(`API key is malformed "${apiKey}"`);
     return [null, ErrorEnum.UNAUTHENTICATED];
   }
 
   if (signature === undefined) {
-    console.warn(`API key signature is missing for key "${key}"`);
+    log.warn(`API key signature is missing for key "${key}"`);
     return [null, ErrorEnum.UNAUTHENTICATED];
   }
 
@@ -36,12 +37,12 @@ export const verifyApiKey = (req: Request, requiredScope: AccessScope): [string,
   const actualSignature = Uint8Array.from(Buffer.from(signature, 'base64url'));
 
   if (expectedSignature.length !== actualSignature.length) {
-    console.warn(`API key signature length mismatch for key "${key}"`);
+    log.warn(`API key signature length mismatch for key "${key}"`);
     return [null, ErrorEnum.UNAUTHORIZED];
   }
 
   if (!timingSafeEqual(expectedSignature, actualSignature)) {
-    console.warn(`API key signature mismatch for key "${key}"`);
+    log.warn(`API key signature mismatch for key "${key}"`);
     return [null, ErrorEnum.UNAUTHENTICATED];
   }
 
@@ -49,12 +50,12 @@ export const verifyApiKey = (req: Request, requiredScope: AccessScope): [string,
   const [namespace, scope] = key.split(':');
 
   if (!validateScope(scope, requiredScope)) {
-    console.warn(`API key invalid scope. Required "${requiredScope}", got "${scope}"`);
+    log.warn(`API key invalid scope. Required "${requiredScope}", got "${scope}"`);
     return [null, ErrorEnum.UNAUTHORIZED];
   }
 
   if (namespace === undefined) {
-    console.warn(`API key namespace is missing in key "${key}"`);
+    log.warn(`API key namespace is missing in key "${key}"`);
     return [null, ErrorEnum.INVALID_NAMESPACE];
   }
 
