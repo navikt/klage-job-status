@@ -150,7 +150,7 @@ class Jobs {
     const now = Date.now();
     const timeout = input?.timeout === undefined ? DEFAULT_JOB_TIMEOUT : Math.min(input.timeout, DELETE_JOB_AFTER);
 
-    const job: Job = {
+    const createJob: Job = {
       id: jobId,
       namespace,
       name: input?.name,
@@ -163,28 +163,37 @@ class Jobs {
 
     try {
       const key = formatJobKey(jobKey);
-      const json = JSON.stringify(job);
+      const json = JSON.stringify(createJob);
       await Promise.all([
         this.#client.set(key, json, {
           expiration: { type: 'EX', value: DELETE_JOB_AFTER }, // EX seconds -- Set the specified expire time, in seconds (a positive integer).
         }),
-        this.#publish({ job, eventType: JobEventType.CREATED }),
+        this.#publish({ job: createJob, eventType: JobEventType.CREATED }),
       ]);
 
       setTimeout(async () => {
-        log.debug(`Job "${key}" timed out after ${job.timeout} seconds`, { jobId, namespace });
+        log.debug(`Job "${key}" timed out after ${createJob.timeout} seconds`, { jobId, namespace });
 
-        const [, error] = await this.#update(log, job, Status.TIMEOUT);
+        const [existingJob, getError] = await this.#get(log, jobKey);
 
-        if (error !== null) {
-          log.error(`Failed to update job "${key}" to TIMEOUT`, { jobId, namespace, error });
+        if (getError !== null) {
+          if (getError !== ErrorEnum.NOT_FOUND) {
+            log.error(`Failed to get job "${key}" for timeout update`, { jobId, namespace, error: getError });
+          }
+          return;
+        }
+
+        const [, updateError] = await this.#update(log, existingJob, Status.TIMEOUT);
+
+        if (updateError !== null) {
+          log.error(`Failed to update job "${key}" to TIMEOUT`, { jobId, namespace, error: updateError });
           return;
         }
 
         log.debug(`Set job "${key}" status to TIMEOUT`, { jobId, namespace });
-      }, job.timeout * 1000);
+      }, createJob.timeout * 1000);
 
-      return [job, null];
+      return [createJob, null];
     } catch (error) {
       log.error('Error setting job data', {
         jobId,
