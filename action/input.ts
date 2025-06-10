@@ -32,6 +32,8 @@ const getJobId = () => {
 };
 
 export const JOB_ID = getJobId();
+export const FAIL = process.env.FAIL === 'true' || process.env.FAIL === '1';
+export const FAIL_ON_UNKNOWN = process.env.FAIL_ON_UNKNOWN === 'true' || process.env.FAIL_ON_UNKNOWN === '1';
 
 export const API_KEY = IS_GITHUB_ACTION
   ? getRequiredEnv('API_KEY')
@@ -39,9 +41,9 @@ export const API_KEY = IS_GITHUB_ACTION
 
 export const TIMEOUT = IS_GITHUB_ACTION ? getTimeout() : 600; // How long this action will wait for the job to finish (in seconds)
 
-export const JOB_URL = IS_GITHUB_ACTION
-  ? `https://klage-job-status.ekstern.dev.nav.no/jobs/${JOB_ID}`
-  : `http://localhost:8080/jobs/${JOB_ID}`;
+export const BASE_URL = IS_GITHUB_ACTION ? 'https://klage-job-status.ekstern.dev.nav.no' : 'http://localhost:8080';
+
+export const JOB_URL = `${BASE_URL}/jobs/${JOB_ID}`;
 
 const [namespace] = API_KEY.split(':');
 
