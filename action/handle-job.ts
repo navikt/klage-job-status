@@ -73,7 +73,7 @@ export const handleJob = async (job: Job) => {
     [h('Runtime'), formattedRuntime],
     [h('Job ID'), job.id],
     [h('Namespace'), job.namespace],
-    [h('Timeout'), `${job.timeout} seconds`],
+    [h('Timeout'), formatDuration(intervalToDuration({ start: 0, end: job.timeout * 1000 }))],
     [h('Job URL'), `${BASE_URL}/jobs/${job.id}`],
     [h('Created'), format(job.created, 'dd-MM-yyyy HH:mm:ss')],
     [h('Modified'), format(job.modified, 'dd-MM-yyyy HH:mm:ss')],
