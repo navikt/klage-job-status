@@ -67,19 +67,6 @@ export const handleJob = async (job: Job) => {
     }
   }
 
-  summary.addTable([
-    [h('Job Name'), name(job.name)],
-    [h('Status'), job.status],
-    [h('Runtime'), formattedRuntime],
-    [h('Job ID'), job.id],
-    [h('Namespace'), job.namespace],
-    [h('Timeout'), formatDuration(intervalToDuration({ start: 0, end: job.timeout * 1000 }))],
-    [h('Job URL'), `${BASE_URL}/jobs/${job.id}`],
-    [h('Created'), format(job.created, 'dd.MM.yyyy HH:mm:ss')],
-    [h('Modified'), format(job.modified, 'dd.MM.yyyy HH:mm:ss')],
-    [h('Ended'), job.ended ? format(job.ended, 'dd.MM.yyyy HH:mm:ss') : 'Still running'],
-  ]);
-
   const params = new URLSearchParams();
   params.set('namespace', job.namespace);
   params.set('status', job.status);
@@ -89,6 +76,20 @@ export const handleJob = async (job: Job) => {
   }
 
   summary.addLink('See job status', `${BASE_URL}?${params.toString()}`);
+
+  summary.addBreak();
+
+  summary.addTable([
+    [h('Job Name'), name(job.name)],
+    [h('Status'), job.status],
+    [h('Runtime'), formattedRuntime],
+    [h('Job ID'), job.id],
+    [h('Namespace'), job.namespace],
+    [h('Timeout'), formatDuration(intervalToDuration({ start: 0, end: job.timeout * 1000 }))],
+    [h('Created'), format(job.created, 'dd.MM.yyyy HH:mm:ss')],
+    [h('Modified'), format(job.modified, 'dd.MM.yyyy HH:mm:ss')],
+    [h('Ended'), job.ended ? format(job.ended, 'dd.MM.yyyy HH:mm:ss') : 'Still running'],
+  ]);
 
   if (IS_GITHUB_ACTION) {
     await summary.write();
