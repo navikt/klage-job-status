@@ -1,11 +1,11 @@
 import { Sorting } from '@app/components/JobsList/Sorting';
 import { StatItem } from '@app/components/JobsList/StatItem';
-import { SearchFilter } from '@app/components/SearchFilter';
 import { JobCard } from '@app/components/job-card/JobCard';
+import { SearchFilter } from '@app/components/SearchFilter';
 import { useJobs } from '@app/context/JobsContext';
 import { SortBy, SortOrder, useSearchParams } from '@app/hooks/query-state';
 import { Status } from '@common/common';
-import { Box, HGrid, HStack, Heading, VStack } from '@navikt/ds-react';
+import { Box, Heading, HGrid, HStack, VStack } from '@navikt/ds-react';
 import { useMemo } from 'react';
 
 const ALL_STATUS = 'ALL';

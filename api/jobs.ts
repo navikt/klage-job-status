@@ -4,8 +4,8 @@ import { formatJobKey, validateJobKey } from '@api/job-key';
 import { LOGS } from '@api/logging';
 import { getSpanId, getTraceId } from '@api/trace-id';
 import type { CreateJobInput } from '@api/types';
-import { type Job, type JobEvent, JobEventType, type JobKey, Status, isJob, isJobEvent } from '@common/common';
-import { type RedisClientType, createClient } from 'redis';
+import { isJob, isJobEvent, type Job, type JobEvent, JobEventType, type JobKey, Status } from '@common/common';
+import { createClient, type RedisClientType } from 'redis';
 
 const VALKEY_URI = process.env.REDIS_URI_KLAGE_JOB_STATUS;
 const VALKEY_USERNAME = process.env.REDIS_USERNAME_KLAGE_JOB_STATUS;

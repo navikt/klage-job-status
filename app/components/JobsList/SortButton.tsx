@@ -1,5 +1,5 @@
 import { SortOrder } from '@app/hooks/query-state';
-import { ArrowDownIcon, ArrowUpIcon, ArrowsUpDownIcon } from '@navikt/aksel-icons';
+import { ArrowDownIcon, ArrowsUpDownIcon, ArrowUpIcon } from '@navikt/aksel-icons';
 import { Button } from '@navikt/ds-react';
 
 interface SortButtonProps {

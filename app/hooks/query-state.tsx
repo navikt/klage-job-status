@@ -1,4 +1,4 @@
-import { type Status, isStatus } from '@common/common';
+import { isStatus, type Status } from '@common/common';
 import { useEffect, useState } from 'react';
 
 export const ALL_STATUS = 'ALL';

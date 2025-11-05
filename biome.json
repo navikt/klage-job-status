@@ -1,72 +1,45 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-  "files": {
-    "ignore": [".bruno", "app/dist"]
+  "$schema": "https://biomejs.dev/schemas/2.3.3/schema.json",
+  "root": true,
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "defaultBranch": "main"
   },
-  "organizeImports": {
-    "enabled": true
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": {
+          "level": "on",
+          "options": {
+            "groups": ["**"]
+          }
+        }
+      }
+    }
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "all": true,
       "nursery": {
-        "all": true,
-        "useImportRestrictions": {
-          "level": "off"
-        },
-        "noSecrets": {
-          "level": "off",
-          "options": {}
-        },
-        "useComponentExportOnlyModules": {
-          "level": "off",
-          "options": {}
-        },
-        "noEnum": {
-          "level": "off"
-        },
-        "useExplicitType": {
-          "level": "off"
-        },
-        "useConsistentMemberAccessibility": {
-          "level": "off",
-          "options": {}
-        },
-        "useConsistentCurlyBraces": {
-          "level": "off",
-          "fix": "none"
-        },
-        "noProcessEnv": {
-          "level": "off"
-        }
+        "useExplicitType": "off"
       },
       "correctness": {
-        "noUndeclaredDependencies": {
-          "level": "off"
-        },
-        "useImportExtensions": {
-          "level": "off",
-          "fix": "none",
-          "options": {}
-        },
-        "noUndeclaredVariables": {
-          "level": "off"
-        }
+        "noPrivateImports": "off",
+        "noUndeclaredDependencies": "off",
+        "useImportExtensions": "off",
+        "noUndeclaredVariables": "off"
       },
       "style": {
-        "noImplicitBoolean": {
-          "level": "off",
-          "fix": "none"
-        },
-        "useDefaultSwitchClause": {
-          "level": "off"
-        },
-        "useNamingConvention": {
-          "level": "off",
-          "fix": "none",
-          "options": {}
-        }
+        "noImplicitBoolean": "off",
+        "useDefaultSwitchClause": "off",
+        "useNamingConvention": "off",
+        "useComponentExportOnlyModules": "off",
+        "noEnum": "off",
+        "useConsistentMemberAccessibility": "off",
+        "useConsistentCurlyBraces": "off",
+        "noProcessEnv": "off"
       },
       "suspicious": {
         "noConsole": {
@@ -75,23 +48,20 @@
             "allow": ["debug", "info", "warn", "error"]
           }
         },
-        "noReactSpecificProps": {
-          "level": "off"
-        },
-        "noEmptyBlockStatements": {
-          "level": "off"
-        }
+        "noReactSpecificProps": "off",
+        "noEmptyBlockStatements": "off"
       },
       "complexity": {
-        "useSimplifiedLogicExpression": {
-          "level": "off"
-        },
+        "useSimplifiedLogicExpression": "off",
         "noExcessiveCognitiveComplexity": {
           "level": "warn",
           "options": {
             "maxAllowedComplexity": 25
           }
         }
+      },
+      "security": {
+        "noSecrets": "off"
       }
     }
   },
@@ -109,9 +79,14 @@
       "enabled": true
     }
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "overrides": [
     {
-      "include": ["api/**", "action/**"],
+      "includes": ["**/api/**", "**/action/**"],
       "linter": {
         "rules": {
           "correctness": {
@@ -120,5 +95,8 @@
         }
       }
     }
-  ]
+  ],
+  "files": {
+    "includes": ["**", "!**/.bruno", "!**/app/dist"]
+  }
 }

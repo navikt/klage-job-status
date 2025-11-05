@@ -9,22 +9,22 @@
     "lint": "biome check"
   },
   "dependencies": {
-    "@navikt/aksel-icons": "7.22.0",
-    "@navikt/ds-css": "7.22.0",
-    "@navikt/ds-react": "7.22.0",
-    "@navikt/ds-tailwind": "7.22.0",
+    "@navikt/aksel-icons": "7.33.0",
+    "@navikt/ds-css": "7.33.0",
+    "@navikt/ds-react": "7.33.0",
+    "@navikt/ds-tailwind": "7.33.0",
     "date-fns": "4.1.0",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "4.1.8",
-    "@types/react": "19.1.6",
-    "@types/react-dom": "19.1.5",
-    "@vitejs/plugin-react": "4.5.1",
+    "@tailwindcss/vite": "4.1.16",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "@vitejs/plugin-react": "5.1.0",
     "tailwind": "4.0.0",
-    "typescript": "5.8.3",
-    "vite": "6.3.5",
+    "typescript": "5.9.3",
+    "vite": "7.2.0",
     "vite-tsconfig-paths": "5.1.4"
   }
 }

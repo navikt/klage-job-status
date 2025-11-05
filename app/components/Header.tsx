@@ -1,8 +1,8 @@
-import { NamespaceSelector } from '@app/components/NamespaceSelector';
 import { ShowApiKeys } from '@app/components/api-keys/ShowApiKeys';
+import { NamespaceSelector } from '@app/components/NamespaceSelector';
 import { useTheme, useToggleTheme } from '@app/hooks/theme';
 import { MoonIcon, SunIcon } from '@navikt/aksel-icons';
-import { Box, Button, HStack, Heading } from '@navikt/ds-react';
+import { Box, Button, Heading, HStack } from '@navikt/ds-react';
 
 export const Header = () => (
   <Box.New

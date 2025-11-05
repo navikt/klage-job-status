@@ -1,7 +1,7 @@
 import { handleJob } from '@action/handle-job';
 import { formatJobName } from '@action/job-name';
 import { ExitCode, error } from '@actions/core';
-import { type Job, isJob } from '@common/common';
+import { isJob, type Job } from '@common/common';
 
 const parseSseEvent = (chunk: string): Job | null => {
   const parts = chunk.trim().split('\n');

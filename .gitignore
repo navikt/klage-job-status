@@ -2,3 +2,4 @@ node_modules/
 .tsbuildinfo
 valkey-data/
 dist/
+.DS_Store

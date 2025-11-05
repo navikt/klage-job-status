@@ -1,4 +1,4 @@
-import { type Job, JobEventType, isJob, isJobKey } from '@common/common';
+import { isJob, isJobKey, type Job, JobEventType } from '@common/common';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 interface JobsContextType {

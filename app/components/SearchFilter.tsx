@@ -1,4 +1,4 @@
-import { Status, isStatus } from '@common/common';
+import { isStatus, Status } from '@common/common';
 import { Search, ToggleGroup } from '@navikt/ds-react';
 import { useEffect, useState } from 'react';
 

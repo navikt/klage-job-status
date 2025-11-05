@@ -1,12 +1,12 @@
-import { StatusBadge } from '@app/components/StatusBadge';
 import { DeleteJob } from '@app/components/job-card/DeleteJob';
 import { JobDetail } from '@app/components/job-card/Detail';
 import { Duration } from '@app/components/job-card/Duration';
 import { isExpired } from '@app/components/job-card/expired';
+import { StatusBadge } from '@app/components/StatusBadge';
 import { formatDate, formatSeconds } from '@app/functions/format';
 import type { Job } from '@common/common';
 import { Status } from '@common/common';
-import { Box, HStack, Heading } from '@navikt/ds-react';
+import { Box, Heading, HStack } from '@navikt/ds-react';
 import { type ComponentProps, type FC, useEffect, useState } from 'react';
 
 interface JobCardProps {

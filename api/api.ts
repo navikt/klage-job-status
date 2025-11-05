@@ -15,10 +15,10 @@ import type { CreateJobInput } from '@api/types';
 import { authenticate } from '@api/user-token';
 import {
   type CreateJobEvent,
+  isValidNamespace,
   type JobEvent,
   JobEventType,
   Status,
-  isValidNamespace,
   validateLength,
 } from '@common/common';
 
