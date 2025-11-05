@@ -43,7 +43,17 @@ export const TIMEOUT = IS_GITHUB_ACTION ? getTimeout() : 600; // How long this a
 
 export const BASE_URL = IS_GITHUB_ACTION ? 'https://klage-job-status.ekstern.dev.nav.no' : 'http://localhost:8080';
 
-export const JOB_URL = `${BASE_URL}/jobs/${JOB_ID}`;
+const getJobUrl = (): URL => {
+  const url = URL.parse(`${BASE_URL}/jobs/${JOB_ID}`);
+
+  if (url === null) {
+    throw new Error(`Invalid job URL: ${url}`);
+  }
+
+  return url;
+};
+
+export const JOB_URL = getJobUrl();
 
 const [namespace] = API_KEY.split(':');
 
