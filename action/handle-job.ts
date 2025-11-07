@@ -1,15 +1,27 @@
-import { BASE_URL, FAIL, FAIL_ON_UNKNOWN, IS_GITHUB_ACTION } from '@action/input';
+import { BASE_URL, FAIL, IS_GITHUB_ACTION } from '@action/input';
 import { formatJobName } from '@action/job-name';
-import { ExitCode, info, setFailed, setOutput, summary } from '@actions/core';
+import { ExitCode, error, info, notice, setFailed, setOutput, summary } from '@actions/core';
 import type { SummaryTableCell } from '@actions/core/lib/summary';
 import { type Job, Status } from '@common/common';
 import { format, formatDuration, intervalToDuration } from 'date-fns';
 
+let lastMessage: string;
+
+/** Handle job status updates - exits the process if the job is not running */
 export const handleJob = async (job: Job) => {
   const duration = intervalToDuration({ start: job.created, end: job.ended ?? Date.now() });
   const formattedRuntime = formatDuration(duration);
 
-  info(`${formatJobName(job)} has status ${job.status} after ${formattedRuntime}`);
+  const nextMessage = `${formatJobName(job)} has status ${job.status} after ${formattedRuntime}`;
+
+  if (nextMessage !== lastMessage) {
+    info(nextMessage);
+    lastMessage = nextMessage;
+  }
+
+  if (job.status === Status.RUNNING) {
+    return;
+  }
 
   summary.addSeparator();
 
@@ -17,6 +29,7 @@ export const handleJob = async (job: Job) => {
 
   switch (job.status) {
     case Status.SUCCESS: {
+      notice(`${formatJobName(job)} succeeded after ${formattedRuntime}!`);
       setOutput('status', 'success');
       exitCode = ExitCode.Success;
       summary.addHeading(`Job "${name(job.name)}" succeeded`, 2);
@@ -25,6 +38,7 @@ export const handleJob = async (job: Job) => {
 
     case Status.FAILED: {
       if (FAIL) {
+        error(`${formatJobName(job)} failed after ${formattedRuntime}`);
         setOutput('status', 'failed');
         exitCode = ExitCode.Failure;
         summary.addHeading(`Job "${name(job.name)}" failed`, 2);
@@ -58,13 +72,6 @@ export const handleJob = async (job: Job) => {
       }
       break;
     }
-
-    case Status.RUNNING: {
-      setOutput('status', FAIL_ON_UNKNOWN ? 'failed' : 'success');
-      exitCode = FAIL_ON_UNKNOWN ? ExitCode.Failure : ExitCode.Success;
-      summary.addHeading(`Job "${name(job.name)}" is running`, 2);
-      break;
-    }
   }
 
   const params = new URLSearchParams();
@@ -72,7 +79,7 @@ export const handleJob = async (job: Job) => {
   params.set('status', job.status);
 
   if (job.name !== undefined) {
-    params.set('name', encodeURIComponent(job.name));
+    params.set('name', job.name);
   }
 
   summary.addLink('See job status', `${BASE_URL}?${params.toString()}`);
@@ -88,7 +95,7 @@ export const handleJob = async (job: Job) => {
     [h('Timeout'), formatDuration(intervalToDuration({ start: 0, end: job.timeout * 1000 }))],
     [h('Created'), format(job.created, 'dd.MM.yyyy HH:mm:ss')],
     [h('Modified'), format(job.modified, 'dd.MM.yyyy HH:mm:ss')],
-    [h('Ended'), job.ended ? format(job.ended, 'dd.MM.yyyy HH:mm:ss') : 'Still running'],
+    [h('Ended'), format(job.ended, 'dd.MM.yyyy HH:mm:ss')],
   ]);
 
   if (IS_GITHUB_ACTION) {
@@ -97,7 +104,7 @@ export const handleJob = async (job: Job) => {
     console.info(summary.stringify());
   }
 
-  process.exit(exitCode ?? ExitCode.Success);
+  process.exit(exitCode);
 };
 
 const name = (name: string | undefined): string => (name === undefined ? '<Unnamed>' : name);

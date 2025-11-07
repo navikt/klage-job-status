@@ -29,7 +29,8 @@
         "noPrivateImports": "off",
         "noUndeclaredDependencies": "off",
         "useImportExtensions": "off",
-        "noUndeclaredVariables": "off"
+        "noUndeclaredVariables": "off",
+        "noUnusedImports": { "level": "warn", "fix": "safe", "options": {} }
       },
       "style": {
         "noImplicitBoolean": "off",
@@ -39,7 +40,8 @@
         "noEnum": "off",
         "useConsistentMemberAccessibility": "off",
         "useConsistentCurlyBraces": "off",
-        "noProcessEnv": "off"
+        "noProcessEnv": "off",
+        "noUselessElse": "on"
       },
       "suspicious": {
         "noConsole": {

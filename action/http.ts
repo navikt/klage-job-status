@@ -3,7 +3,7 @@ import { ExitCode, error } from '@actions/core';
 
 export const checkStatus = async (res: Response) => {
   if (res.status === 404) {
-    error(`Check ${URL} to see status.`, { title: `${formatJobName()} - Not found` });
+    error(`Job not found - Check ${URL} to see status.`, { title: `${formatJobName()} - Not found` });
     process.exit(ExitCode.Failure);
   }
 

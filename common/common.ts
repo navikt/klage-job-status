@@ -62,6 +62,7 @@ export enum JobEventType {
   CREATED = 'created',
   UPDATED = 'updated',
   DELETED = 'deleted',
+  HEARTBEAT = 'heartbeat',
 }
 
 export const JOB_EVENT_TYPES = Object.values(JobEventType);

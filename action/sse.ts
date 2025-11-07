@@ -1,34 +1,56 @@
 import { handleJob } from '@action/handle-job';
-import { formatJobName } from '@action/job-name';
-import { ExitCode, error } from '@actions/core';
-import { isJob, type Job } from '@common/common';
+import { debug, ExitCode, error, info, warning } from '@actions/core';
+import { isJob, isJobEventType, type Job, JobEventType } from '@common/common';
+
+const EVENT_PREFIX = 'event:';
+const EVENT_PREFIX_LENGTH = EVENT_PREFIX.length;
+const DATA_PREFIX = 'data:';
+const DATA_PREFIX_LENGTH = DATA_PREFIX.length;
 
 const parseSseEvent = (chunk: string): Job | null => {
-  const parts = chunk.trim().split('\n');
+  const lines = chunk.trim().split('\n');
 
   let event: string | null = null;
   let data: string | null = null;
 
-  for (const part of parts) {
-    if (part.startsWith('event:')) {
-      event = part.substring(6).trim();
-
-      if (event !== 'job') {
-        return null;
-      }
-    } else if (part.startsWith('data:')) {
-      data = part.substring(5).trim();
+  for (const line of lines) {
+    if (line.startsWith(EVENT_PREFIX)) {
+      event = line.substring(EVENT_PREFIX_LENGTH).trim();
+    } else if (line.startsWith(DATA_PREFIX)) {
+      data = line.substring(DATA_PREFIX_LENGTH).trim();
     }
   }
-  if (event === null || data === null) {
+
+  if (event === null) {
+    warning(`Missing SSE event type in chunk:\n${chunk}`, { title: 'SSE parse warning' });
+    return null;
+  }
+
+  if (!isJobEventType(event)) {
+    warning(`Unknown SSE event type "${event}" in chunk:\n${chunk}`, { title: 'SSE parse warning' });
+    return null;
+  }
+
+  if (event === JobEventType.HEARTBEAT) {
+    debug('Received SSE heartbeat event');
+    return null;
+  }
+
+  if (data === null) {
+    warning(`Missing SSE data in chunk:\n${chunk}`, { title: 'SSE parse warning' });
+    return null;
+  }
+
+  if (data.length === 0) {
+    warning(`Empty SSE data in chunk:\n${chunk}`, { title: 'SSE parse warning' });
     return null;
   }
 
   const job: unknown = JSON.parse(data);
 
   if (!isJob(job)) {
-    error(`Unexpected SSE data:\n${JSON.stringify(job)}`, { title: `${formatJobName()} - Unexpected SSE data` });
-    process.exit(ExitCode.Failure);
+    warning(`Unexpected SSE data:\n${data}`, { title: 'SSE parse warning' });
+    return null;
   }
 
   return job;
@@ -36,12 +58,14 @@ const parseSseEvent = (chunk: string): Job | null => {
 
 export const sse = async (response: Response) => {
   if (response.body === null) {
-    error('Failed to fetch SSE stream', { title: `${formatJobName()} - SSE failed` });
+    error('Failed to fetch SSE stream');
     process.exit(ExitCode.Failure);
   }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder('utf-8');
+
+  info('Waiting for SSE events...');
 
   while (true) {
     const { value, done } = await reader.read();
@@ -52,10 +76,14 @@ export const sse = async (response: Response) => {
 
     const chunk = decoder.decode(value);
 
+    debug(`Received SSE chunk\n${chunk}`);
+
     const job = parseSseEvent(chunk);
 
-    if (job) {
-      handleJob(job);
+    if (job !== null) {
+      handleJob(job); // This will exit the process if the job is not running.
+    } else {
+      debug(`Skipping SSE event:\n${chunk}`);
     }
   }
 };

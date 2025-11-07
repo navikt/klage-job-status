@@ -10,12 +10,11 @@ const headers = new Headers({ API_KEY, accept: 'application/json' });
 export const poll = async (response: Response) => {
   const job = await response.json();
 
-  if (!isJob(job)) {
+  if (isJob(job)) {
+    await handleJob(job); // This will exit the process if the job is not running.
+  } else {
     error(`Unexpected response:\n${JSON.stringify(job)}`);
-    process.exit(ExitCode.Failure);
   }
-
-  await handleJob(job); // This will exit the process if the job is not running.
 
   // If the job is still running, we need to poll for updates. SSE was not offered by the server.
   const ended = Date.now() + TIMEOUT * 1_000;
