@@ -1,8 +1,8 @@
-import { NamespaceProvider } from '@app/context/NamespaceContext';
 import '@app/app.css';
 import { Footer } from '@app/components/Footer';
 import { Header } from '@app/components/Header';
 import { MainContent } from '@app/components/MainContent';
+import { NamespaceProvider } from '@app/context/NamespaceContext';
 import { useTheme } from '@app/hooks/theme';
 import { Box, Theme, VStack } from '@navikt/ds-react';
 

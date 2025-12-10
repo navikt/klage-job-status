@@ -8,7 +8,8 @@ const PROXY: ProxyOptions = {
   changeOrigin: true,
 };
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: mode === 'production' ? 'https://cdn.nav.no/klage/klage-job-status/' : '/',
   plugins: [tsconfigPaths({ projects: ['./tsconfig.json'] }), react(), tailwindcss()],
   build: {
     sourcemap: true,
@@ -19,4 +20,4 @@ export default defineConfig({
       '/api': PROXY,
     },
   },
-});
+}));

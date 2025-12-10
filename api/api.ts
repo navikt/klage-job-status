@@ -1,15 +1,13 @@
-import { extname, join } from 'node:path';
 import { AcceptType, getAcceptValues, preferred } from '@api/accept';
 import { generateApiKey } from '@api/api-key/create';
 import { AccessScope } from '@api/api-key/scope';
 import { verifyApiKey } from '@api/api-key/verify';
 import { getLogContext } from '@api/context';
-import { IS_DEPLOYED } from '@api/env';
 import { ErrorEnum, getErrorResponse } from '@api/error';
+import { FileLoader } from '@api/file-loader';
 import { formatJobKey } from '@api/job-key';
 import { JOBS } from '@api/jobs';
 import { LOGS } from '@api/logging';
-import { MIME_TYPES } from '@api/mime';
 import { getSpanId, getTraceId } from '@api/trace-id';
 import type { CreateJobInput } from '@api/types';
 import { authenticate } from '@api/user-token';
@@ -22,12 +20,14 @@ import {
   validateLength,
 } from '@common/common';
 
+const INDEX_FILE = new FileLoader('./index.html');
+
 const isCreateStatusInput = (data: unknown): data is CreateJobInput => data !== null && typeof data === 'object';
 
 const JOBS_PATH = '/jobs';
 const JOB_PATH = `${JOBS_PATH}/:jobId`;
 
-await JOBS.init();
+JOBS.init();
 
 /**
  * Bun limits headers to 16KiB by default. Use `--max-http-header-size=2048` to set the number of bytes explicitly.
@@ -613,63 +613,56 @@ Bun.serve({
       },
     },
 
-    '/isAlive': new Response('OK'),
-    '/isReady': async () => {
-      const isAlive = await JOBS.ping();
+    '/isAlive': async () => {
+      if (!INDEX_FILE.isReady) {
+        LOGS.error('isAlive - Index file not ready', getTraceId(), getSpanId(), 'is-alive');
+        return new Response('Index file not ready', { status: 418 });
+      }
 
-      return isAlive ? new Response('OK') : new Response('Not Ready', { status: 418 });
+      if (!JOBS.isReady) {
+        LOGS.error('isAlive - Jobs system not ready', getTraceId(), getSpanId(), 'is-alive');
+        return new Response('Jobs system not ready', { status: 418 });
+      }
+
+      if (!(await JOBS.ping())) {
+        LOGS.error('isAlive - Jobs system not responding', getTraceId(), getSpanId(), 'is-alive');
+        return new Response('Jobs system not responding', { status: 418 });
+      }
+
+      return new Response('OK', { status: 200 });
     },
 
-    '/assets/*': {
-      GET: async (req) => {
-        const log = getLogContext('get-asset', req);
-        const url = new URL(req.url);
-        const path = url.pathname.replace('/assets', '');
+    '/isReady': async () => {
+      if (!INDEX_FILE.isReady) {
+        LOGS.error('isReady - Index HTML file not found', getTraceId(), getSpanId(), 'is-ready');
+        return new Response('Index file not ready', { status: 418 });
+      }
 
-        try {
-          const file = await getFile(join(import.meta.dir, './public/assets', path));
+      if (!JOBS.isReady) {
+        LOGS.error('isReady - Jobs system not ready', getTraceId(), getSpanId(), 'is-ready');
+        return new Response('Jobs system not ready', { status: 418 });
+      }
 
-          if (file === null) {
-            log.warn(`Asset file not found: "${path}"`, { path, status: 404 });
-            return new Response('Not Found', { status: 404 });
-          }
-
-          return new Response(file, {
-            headers: {
-              'Content-Type': MIME_TYPES[extname(path)] ?? 'application/octet-stream',
-            },
-          });
-        } catch (error) {
-          log.error(`Error reading asset file: "${path}"`, {
-            path,
-            status: 500,
-            error: error instanceof Error ? error : 'Unknown error',
-          });
-
-          return new Response('Internal Server Error', { status: 500 });
-        }
-      },
+      return new Response('OK', { status: 200 });
     },
 
     '/*': {
-      GET: () => new Response(INDEX_HTML, { headers: { Location: '/app', 'Content-Type': 'text/html' } }),
+      GET: () => {
+        try {
+          return new Response(INDEX_FILE.content, { headers: { Location: '/app', 'Content-Type': 'text/html' } });
+        } catch (err) {
+          if (err instanceof Error) {
+            LOGS.error(`Index HTML file not found - ${err.message}`, getTraceId(), getSpanId(), 'index-html');
+          } else {
+            LOGS.error('Index HTML file not found', getTraceId(), getSpanId(), 'index-html');
+          }
+
+          return new Response('Service Unavailable', { status: 503 });
+        }
+      },
     },
   },
 });
-
-const getFile = async (path: string) => {
-  const file = Bun.file(path);
-  const exists = await file.exists();
-
-  return exists ? file : null;
-};
-
-const INDEX_HTML = await getFile(join(import.meta.dir, './public/index.html'));
-
-if (IS_DEPLOYED && INDEX_HTML === null) {
-  LOGS.error('Index HTML file not found', getTraceId(), getSpanId(), 'index-html');
-  process.exit(1);
-}
 
 const JOB_ID_REGEX = /^[a-zA-Z0-9-_]+$/;
 const JOB_ID_MAX_LENGTH = 64;

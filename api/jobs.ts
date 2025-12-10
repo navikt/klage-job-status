@@ -20,6 +20,8 @@ class Jobs {
   #client: RedisClientType;
   #subscribeClient: RedisClientType;
 
+  #isReady = false;
+
   #traceId = getTraceId();
   #spanId = getSpanId();
 
@@ -44,10 +46,15 @@ class Jobs {
     );
   }
 
+  public get isReady() {
+    return this.#isReady;
+  }
+
   public async init() {
     await Promise.all([this.#subscribeClient.connect(), this.#client.connect()]);
     LOGS.debug('Connected to Valkey Data and Subscribe clients', this.#traceId, this.#spanId, 'init');
-    this.#clean();
+    await this.#clean();
+    this.#isReady = true;
   }
 
   #clean = async () => {

@@ -2,6 +2,7 @@
   "name": "api",
   "scripts": {
     "start": "bun api.ts",
+    "build": "bun build api.ts --compile --bytecode --minify --sourcemap --no-compile-autoload-dotenv --no-compile-autoload-bunfig --outfile ./dist/api",
     "test": "bun test",
     "lint": "biome check",
     "typecheck": "tsc --noEmit"
