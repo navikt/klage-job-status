@@ -10,10 +10,6 @@ spec:
   replicas:
     min: 2
     max: 3
-  accessPolicy:
-    inbound:
-      rules:
-        - application: kabal-e2e-tests
   ingresses:
     - https://klage-job-status.ekstern.dev.nav.no
   valkey:
