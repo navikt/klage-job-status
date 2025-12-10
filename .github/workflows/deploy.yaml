@@ -25,32 +25,39 @@ jobs:
           bun-version: 1.3.4
 
       - name: Install global dependencies
-        shell: bash
         run: bun install --frozen-lockfile
 
       - name: Install API dependencies
-        shell: bash
         working-directory: api
         run: bun install --frozen-lockfile
 
+      - name: Build API
+        working-directory: api
+        run: bun run build
+
       - name: Add GitHub NPM registry token
-        shell: bash
         working-directory: app
         run: echo -e "\n[install.scopes]\n\"@navikt\" = { token = \"${{ secrets.READER_TOKEN }}\", url = \"https://npm.pkg.github.com/\" }" >> bunfig.toml
 
       - name: Install app dependencies
-        shell: bash
         working-directory: app
         run: bun install --frozen-lockfile
 
-      - name: Run tests
-        shell: bash
-        run: bun test
-
       - name: Build app
-        shell: bash
         working-directory: app
         run: bun run build
+
+      - name: Run tests
+        run: bun test
+
+      - name: Upload static files to CDN
+        uses: nais/deploy/actions/cdn-upload/v2@master
+        with:
+          team: klage
+          source: ./app/dist/assets
+          destination: klage-job-status
+          project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }}
+          identity_provider: ${{ secrets.NAIS_WORKLOAD_IDENTITY_PROVIDER }}
 
       - name: Build & push Docker image
         uses: nais/docker-build-push@v0
