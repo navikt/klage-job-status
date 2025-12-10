@@ -7,6 +7,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "redis": "5.9.0"
+    "redis": "5.10.0"
   }
 }
