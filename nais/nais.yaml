@@ -10,6 +10,12 @@ spec:
   replicas:
     min: 2
     max: 3
+  resources:
+    requests:
+      cpu: 42m
+      memory: 64Mi
+    limits:
+      memory: 96Mi
   ingresses:
     - https://klage-job-status.ekstern.dev.nav.no
   valkey:
