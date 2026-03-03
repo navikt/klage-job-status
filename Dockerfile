@@ -1,4 +1,4 @@
-FROM cgr.dev/chainguard/glibc-dynamic:latest@sha256:32e4a9556c591d7a6bfcaf4712d102a943c921c3674a3d07673c8d7cd2e18456
+FROM cgr.dev/chainguard/glibc-dynamic:latest@sha256:43213d6f7b75a4f32ef3070bf395f8001c62e2a20112f2e2d656d82d9f505170
 
 WORKDIR /usr/src/klage-job-status
 
