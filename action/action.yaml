@@ -39,7 +39,7 @@ runs:
     - name: Install dependencies
       shell: bash
       working-directory: ./action
-      run: bun install --frozen-lockfile
+      run: bun install --frozen-lockfile --ignore-scripts
 
     - name: Job status
       id: status
