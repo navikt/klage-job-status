@@ -23,6 +23,9 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.4
+          registries: |
+            https://registry.npmjs.org/
+            @navikt:https://npm.pkg.github.com/|$BUN_AUTH_TOKEN
 
       - name: Install global dependencies
         run: bun install --frozen-lockfile --ignore-scripts
@@ -35,12 +38,10 @@ jobs:
         working-directory: api
         run: bun run build
 
-      - name: Add GitHub NPM registry token
-        working-directory: app
-        run: echo -e "\n[install.scopes]\n\"@navikt\" = { token = \"${{ secrets.READER_TOKEN }}\", url = \"https://npm.pkg.github.com/\" }" >> bunfig.toml
-
       - name: Install app dependencies
         working-directory: app
+        env:
+          BUN_AUTH_TOKEN: ${{ secrets.READER_TOKEN }}
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Build app
