@@ -62,10 +62,10 @@ export const JobsList = () => {
 
   if (error !== null) {
     return (
-      <Box.New
-        padding="4"
-        borderRadius="medium"
-        marginBlock="0 6"
+      <Box
+        padding="space-16"
+        borderRadius="4"
+        marginBlock="space-0 space-6"
         borderWidth="1"
         borderColor="danger"
         className="bg-[#f8d7da] text-[#721c24]"
@@ -74,13 +74,13 @@ export const JobsList = () => {
           Error loading jobs
         </Heading>
         <p>{error}</p>
-      </Box.New>
+      </Box>
     );
   }
 
   return (
     <VStack as="section" minHeight="100%" flexGrow="1">
-      <HGrid marginBlock="0 6" gap="4" columns={{ '2xl': 5, xl: 5, lg: 5, md: 5, sm: 5, xs: 2 }}>
+      <HGrid marginBlock="space-0 space-24" gap="space-16" columns={{ '2xl': 5, xl: 5, lg: 5, md: 5, sm: 5, xs: 2 }}>
         <StatItem jobs={jobs}>Total Jobs</StatItem>
         <StatItem jobs={jobs} status={Status.RUNNING}>
           Running

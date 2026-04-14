@@ -1,9 +1,9 @@
 import { Box, HStack, Link } from '@navikt/ds-react';
 
 export const Footer = () => (
-  <Box.New
+  <Box
     as="footer"
-    padding="4"
+    padding="space-16"
     borderWidth="1 0 0 0"
     borderColor="accent"
     background="default"
@@ -11,7 +11,7 @@ export const Footer = () => (
   >
     <p>Job Status Dashboard - by Team Klage</p>
 
-    <HStack align="center" justify="center" gap="4">
+    <HStack align="center" justify="center" gap="space-16">
       <Link
         href="https://github.com/navikt/klage-job-status"
         target="_blank"
@@ -39,5 +39,5 @@ export const Footer = () => (
         Slack
       </Link>
     </HStack>
-  </Box.New>
+  </Box>
 );

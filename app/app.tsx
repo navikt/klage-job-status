@@ -1,4 +1,3 @@
-import '@app/app.css';
 import { Footer } from '@app/components/Footer';
 import { Header } from '@app/components/Header';
 import { MainContent } from '@app/components/MainContent';
@@ -15,17 +14,17 @@ export const App = () => {
         <VStack width="100%" minHeight="100%">
           <Header />
 
-          <Box.New
+          <Box
             width="100%"
             background="sunken"
-            paddingInline="4"
-            paddingBlock="8"
+            paddingInline="space-16"
+            paddingBlock="space-32"
             maxWidth="500"
             flexGrow="1"
             marginInline="auto"
           >
             <MainContent />
-          </Box.New>
+          </Box>
 
           <Footer />
         </VStack>

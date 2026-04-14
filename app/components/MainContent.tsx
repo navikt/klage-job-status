@@ -22,7 +22,7 @@ export const MainContent = () => {
           Select or create a namespace to view jobs
         </Heading>
 
-        <HStack gap="4">
+        <HStack gap="space-16">
           {namespaces.map((ns) => (
             <Button variant="primary" key={ns} onClick={() => setNamespace(ns)}>
               {ns}

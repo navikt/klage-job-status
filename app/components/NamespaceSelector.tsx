@@ -9,9 +9,9 @@ export const NamespaceSelector = () => {
   return (
     <HStack
       as="section"
-      paddingBlock="2"
-      paddingInline="4"
-      gap="2"
+      paddingBlock="space-8"
+      paddingInline="space-16"
+      gap="space-8"
       align="center"
       className="text-small text-text-subtle"
     >

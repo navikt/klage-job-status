@@ -2,14 +2,14 @@ import { type Job, Status } from '@common/common';
 import { Box, type BoxNewProps } from '@navikt/ds-react';
 
 export const StatusBadge = ({ status }: Pick<Job, 'status'>) => (
-  <Box.New
+  <Box
     as="span"
-    borderRadius="medium"
+    borderRadius="4"
     background={BACKGROUND_COLOR[status]}
     className={`rounded-medium px-2 py-1 font-bold text-[12px] uppercase ${TEXT_COLOR[status]}`}
   >
     {status}
-  </Box.New>
+  </Box>
 );
 
 const BACKGROUND_COLOR: Record<Status, BoxNewProps['background']> = {

@@ -5,7 +5,7 @@ import { MoonIcon, SunIcon } from '@navikt/aksel-icons';
 import { Box, Button, Heading, HStack } from '@navikt/ds-react';
 
 export const Header = () => (
-  <Box.New
+  <Box
     as="header"
     background="default"
     borderColor="accent"
@@ -13,7 +13,7 @@ export const Header = () => (
     width="100%"
     className="flex flex-row items-center justify-center"
   >
-    <HStack justify="space-between" align="center" padding="4" className="mx-auto w-full max-w-500">
+    <HStack justify="space-between" align="center" padding="space-16" className="mx-auto w-full max-w-500">
       <Heading as="a" level="1" size="medium" href="/" className="mr-auto">
         Job Status Dashboard
       </Heading>
@@ -24,7 +24,7 @@ export const Header = () => (
 
       <ThemeSwitcher />
     </HStack>
-  </Box.New>
+  </Box>
 );
 
 const ThemeSwitcher = () => {

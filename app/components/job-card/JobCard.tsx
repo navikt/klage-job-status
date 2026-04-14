@@ -17,20 +17,19 @@ export const JobCard: FC<JobCardProps> = ({ job }) => {
   const status = useJobStatus(job);
 
   return (
-    <Box.New
+    <Box
       as="li"
       background="default"
       width="100%"
-      borderRadius="large"
-      borderWidth="0 0 0 4"
+      borderRadius="8"
       borderColor={STATUS_BORDER_COLOR.get(status)}
-      padding="5"
+      padding="space-20"
       shadow="dialog"
       position="relative"
       overflow="hidden"
-      className="hover:-translate-y-0.5 group text-left transition-[translate] duration-200 hover:bg-ax-bg-accent-moderate-a"
+      className="hover:-translate-y-0.5 group text-left transition-[translate] duration-200 hover:bg-ax-bg-accent-moderate-a border-l-4"
     >
-      <HStack marginBlock="0 3" align="center" justify="space-between">
+      <HStack marginBlock="space-0 space-12" align="center" justify="space-between">
         <Heading level="3" size="xsmall" className="font-normal text-text-subtle">
           {job.name ?? 'Unnamed Job'}
         </Heading>
@@ -49,16 +48,16 @@ export const JobCard: FC<JobCardProps> = ({ job }) => {
         <JobDetail label="Timeout">{formatSeconds(job.timeout)}</JobDetail>
       </div>
 
-      <Box.New
+      <Box
         position="absolute"
-        bottom="0"
-        right="0"
-        padding="2"
+        bottom="space-0"
+        right="space-0"
+        padding="space-8"
         className="opacity-0 transition-opacity duration-200 group-hover:opacity-100"
       >
         <DeleteJob jobId={job.id} namespace={job.namespace} />
-      </Box.New>
-    </Box.New>
+      </Box>
+    </Box>
   );
 };
 

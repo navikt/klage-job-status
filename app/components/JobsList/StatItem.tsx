@@ -8,11 +8,11 @@ interface StatItemProps {
 }
 
 export const StatItem = ({ jobs, status, children }: StatItemProps) => (
-  <Box.New
+  <Box
     background="default"
-    borderRadius="medium"
-    paddingInline="3"
-    paddingBlock="4"
+    borderRadius="4"
+    paddingInline="space-12"
+    paddingBlock="space-16"
     shadow="dialog"
     className="min-w-25 grow text-center"
   >
@@ -21,5 +21,5 @@ export const StatItem = ({ jobs, status, children }: StatItemProps) => (
     </span>
 
     <span className="text-small text-text-subtle">{children}</span>
-  </Box.New>
+  </Box>
 );

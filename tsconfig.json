@@ -6,6 +6,8 @@
     "module": "ESNext",
     "skipLibCheck": true,
 
+    "types": ["@types/bun"],
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -21,12 +23,11 @@
     "noFallthroughCasesInSwitch": true,
 
     /* Paths */
-    "baseUrl": "./",
     "paths": {
-      "@api/*": ["api/*"],
-      "@action/*": ["action/*"],
-      "@app/*": ["app/*"],
-      "@common/*": ["common/*"]
+      "@api/*": ["./api/*"],
+      "@action/*": ["./action/*"],
+      "@app/*": ["./app/*"],
+      "@common/*": ["./common/*"]
     },
 
     "incremental": true,

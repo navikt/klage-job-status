@@ -1,7 +1,6 @@
 import { BASE_URL, FAIL, IS_GITHUB_ACTION } from '@action/input';
 import { formatJobName } from '@action/job-name';
 import { ExitCode, error, info, notice, setFailed, setOutput, summary } from '@actions/core';
-import type { SummaryTableCell } from '@actions/core/lib/summary';
 import { type Job, Status } from '@common/common';
 import { format, formatDuration, intervalToDuration } from 'date-fns';
 
@@ -108,5 +107,27 @@ export const handleJob = async (job: Job) => {
 };
 
 const name = (name: string | undefined): string => (name === undefined ? '<Unnamed>' : name);
+
+interface SummaryTableCell {
+  /**
+   * Cell content
+   */
+  data: string;
+  /**
+   * Render cell as header
+   * (optional) default: false
+   */
+  header?: boolean;
+  /**
+   * Number of columns the cell extends
+   * (optional) default: '1'
+   */
+  colspan?: string;
+  /**
+   * Number of rows the cell extends
+   * (optional) default: '1'
+   */
+  rowspan?: string;
+}
 
 const h = (header: string): SummaryTableCell => ({ data: header, header: true });
