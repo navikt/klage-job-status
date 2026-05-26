@@ -31,7 +31,7 @@ export const Footer = () => (
       </Link>
 
       <Link
-        href="https://nav-it.slack.com/archives/C01L59AQVQA"
+        href="https://nav-it.slack.com/archives/C02G2ENANMNQA"
         target="_blank"
         rel="noopener noreferrer"
         className="block"
