@@ -9,21 +9,21 @@
     "lint": "biome check"
   },
   "dependencies": {
-    "@navikt/aksel-icons": "8.11.0",
-    "@navikt/ds-css": "8.11.0",
-    "@navikt/ds-react": "8.11.0",
-    "@navikt/ds-tailwind": "8.11.0",
-    "date-fns": "4.3.0",
-    "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "@navikt/aksel-icons": "8.14.0",
+    "@navikt/ds-css": "8.14.0",
+    "@navikt/ds-react": "8.14.0",
+    "@navikt/ds-tailwind": "8.14.0",
+    "date-fns": "4.4.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "4.3.0",
-    "@types/react": "19.2.15",
+    "@tailwindcss/vite": "4.3.2",
+    "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-react": "6.0.3",
     "tailwind": "4.0.0",
     "typescript": "6.0.3",
-    "vite": "8.0.14"
+    "vite": "8.1.3"
   }
 }

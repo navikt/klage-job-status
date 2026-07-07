@@ -316,7 +316,7 @@ class Jobs {
     try {
       const json = JSON.stringify(updatedJob);
       await Promise.all([
-        this.#client.set(key, json, { keepTTL: true }),
+        this.#client.set(key, json, { expiration: 'KEEPTTL' }),
         this.#publish({ job: updatedJob, eventType: JobEventType.UPDATED }),
       ]);
     } catch (error) {
