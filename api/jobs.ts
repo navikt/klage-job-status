@@ -318,7 +318,9 @@ class Jobs {
     try {
       const json = JSON.stringify(updatedJob);
       await Promise.all([
-        this.#client.set(key, json, { expiration: 'KEEPTTL' }),
+        this.#client.set(key, json, {
+          expiration: { type: 'EX', value: DELETE_JOB_AFTER }, // EX seconds -- Set the specified expire time, in seconds (a positive integer).
+        }),
         this.#publish({ job: updatedJob, eventType: JobEventType.UPDATED }),
       ]);
     } catch (error) {
