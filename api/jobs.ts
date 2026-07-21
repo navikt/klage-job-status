@@ -11,8 +11,10 @@ const VALKEY_URI = process.env.REDIS_URI_KLAGE_JOB_STATUS;
 const VALKEY_USERNAME = process.env.REDIS_USERNAME_KLAGE_JOB_STATUS;
 const VALKEY_PASSWORD = process.env.REDIS_PASSWORD_KLAGE_JOB_STATUS;
 
-const DELETE_JOB_AFTER = 60 * 60 * 24 * 30; // 30 days
-const DEFAULT_JOB_TIMEOUT = 60 * 10; // 10 minutes
+/** 30 days */
+const DELETE_JOB_AFTER = 60 * 60 * 24 * 30;
+/** 10 minutes */
+const DEFAULT_JOB_TIMEOUT = 60 * 10;
 
 type Listener = (event: JobEvent) => void;
 
