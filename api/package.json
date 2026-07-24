@@ -8,6 +8,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "redis": "6.1.0"
+    "@valkey/valkey-glide": "^2.5.0"
   }
 }
