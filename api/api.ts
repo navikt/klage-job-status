@@ -27,7 +27,15 @@ const isCreateStatusInput = (data: unknown): data is CreateJobInput => data !== 
 const JOBS_PATH = '/jobs';
 const JOB_PATH = `${JOBS_PATH}/:jobId`;
 
-JOBS.init();
+JOBS.init({
+  uri: process.env.REDIS_URI_KLAGE_JOB_STATUS,
+  username: process.env.REDIS_USERNAME_KLAGE_JOB_STATUS,
+  password: process.env.REDIS_PASSWORD_KLAGE_JOB_STATUS,
+}).catch((error: unknown) => {
+  LOGS.error('Failed to initialize Jobs system', getTraceId(), getSpanId(), 'init', {
+    error: error instanceof Error ? error : 'Unknown error',
+  });
+});
 
 /**
  * Bun limits headers to 16KiB by default. Use `--max-http-header-size=2048` to set the number of bytes explicitly.
