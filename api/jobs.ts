@@ -7,18 +7,20 @@ import type { CreateJobInput } from '@api/types';
 import { isJob, isJobEvent, type Job, type JobEvent, JobEventType, type JobKey, Status } from '@common/common';
 import { GlideClient, type GlideString, ProtocolVersion, type PubSubMsg, TimeUnit } from '@valkey/valkey-glide';
 
-const VALKEY_URI = process.env.REDIS_URI_KLAGE_JOB_STATUS;
-const VALKEY_USERNAME = process.env.REDIS_USERNAME_KLAGE_JOB_STATUS;
-const VALKEY_PASSWORD = process.env.REDIS_PASSWORD_KLAGE_JOB_STATUS;
-
-/** 30 days */
-const DELETE_JOB_AFTER = 60 * 60 * 24 * 30;
+/** 30 days, in seconds. */
+const DEFAULT_DELETE_JOB_AFTER = 60 * 60 * 24 * 30;
 /** 10 minutes */
 const DEFAULT_JOB_TIMEOUT = 60 * 10;
 
 type Listener = (event: JobEvent) => void;
 
 const toStr = (value: GlideString): string => (typeof value === 'string' ? value : value.toString());
+
+export interface ValkeyConnection {
+  uri: string | undefined;
+  username?: string;
+  password?: string;
+}
 
 interface ParsedUri {
   host: string;
@@ -35,7 +37,7 @@ const parseValkeyUri = (uri: string | undefined): ParsedUri => {
 
   return {
     host: url.hostname,
-    port: url.port.length > 0 ? Number(url.port) : 6379,
+    port: url.port.length > 0 ? Number.parseInt(url.port, 10) : 6379,
     useTLS: url.protocol === 'rediss:' || url.protocol === 'valkeys:',
   };
 };
@@ -43,10 +45,14 @@ const parseValkeyUri = (uri: string | undefined): ParsedUri => {
 class Jobs {
   #client: GlideClient | undefined;
 
+  /** Seconds until a job is deleted from Valkey, regardless of its status. */
+  #deleteJobAfter: number = DEFAULT_DELETE_JOB_AFTER;
+
   #channelListeners = new Map<string, Set<Listener>>();
   #patternListeners = new Map<string, Set<Listener>>();
 
   #isReady = false;
+  #initPromise: Promise<void> | undefined;
 
   #traceId = getTraceId();
   #spanId = getSpanId();
@@ -90,13 +96,33 @@ class Jobs {
     return this.#isReady;
   }
 
-  public async init() {
-    const { host, port, useTLS } = parseValkeyUri(VALKEY_URI);
+  public init(connection: ValkeyConnection, deleteJobAfter: number = DEFAULT_DELETE_JOB_AFTER): Promise<void> {
+    if (this.#initPromise !== undefined) {
+      LOGS.warn('init() called again - reusing the existing connection attempt', this.#traceId, this.#spanId, 'init');
+      return this.#initPromise;
+    }
+
+    this.#initPromise = this.#connect(connection, deleteJobAfter).catch((error: unknown) => {
+      // Allow a subsequent call to retry after a genuine failure.
+      this.#initPromise = undefined;
+      throw error;
+    });
+
+    return this.#initPromise;
+  }
+
+  async #connect(connection: ValkeyConnection, deleteJobAfter: number) {
+    this.#deleteJobAfter = deleteJobAfter;
+
+    const { host, port, useTLS } = parseValkeyUri(connection.uri);
 
     this.#client = await GlideClient.createClient({
       addresses: [{ host, port }],
       useTLS,
-      credentials: VALKEY_PASSWORD === undefined ? undefined : { username: VALKEY_USERNAME, password: VALKEY_PASSWORD },
+      credentials:
+        connection.password === undefined
+          ? undefined
+          : { username: connection.username, password: connection.password },
       protocol: ProtocolVersion.RESP3,
       pubsubSubscriptions: {
         channelsAndPatterns: {},
@@ -212,7 +238,7 @@ class Jobs {
     }
 
     const now = Date.now();
-    const timeout = input?.timeout === undefined ? DEFAULT_JOB_TIMEOUT : Math.min(input.timeout, DELETE_JOB_AFTER);
+    const timeout = input?.timeout === undefined ? DEFAULT_JOB_TIMEOUT : Math.min(input.timeout, this.#deleteJobAfter);
 
     const createJob: Job = {
       id: jobId,
@@ -230,7 +256,7 @@ class Jobs {
       const json = JSON.stringify(createJob);
       await Promise.all([
         this.#valkey.set(key, json, {
-          expiry: { type: TimeUnit.Seconds, count: DELETE_JOB_AFTER },
+          expiry: { type: TimeUnit.Seconds, count: this.#deleteJobAfter },
         }),
         this.#publish({ job: createJob, eventType: JobEventType.CREATED }),
       ]);
@@ -375,7 +401,7 @@ class Jobs {
       const json = JSON.stringify(updatedJob);
       await Promise.all([
         this.#valkey.set(key, json, {
-          expiry: { type: TimeUnit.Seconds, count: DELETE_JOB_AFTER },
+          expiry: { type: TimeUnit.Seconds, count: this.#deleteJobAfter },
         }),
         this.#publish({ job: updatedJob, eventType: JobEventType.UPDATED }),
       ]);
