@@ -5,7 +5,7 @@ import { LOGS } from '@api/logging';
 import { getSpanId, getTraceId } from '@api/trace-id';
 import type { CreateJobInput } from '@api/types';
 import { isJob, isJobEvent, type Job, type JobEvent, JobEventType, type JobKey, Status } from '@common/common';
-import { createClient, type RedisClientType } from 'redis';
+import { GlideClient, type GlideString, ProtocolVersion, type PubSubMsg, TimeUnit } from '@valkey/valkey-glide';
 
 const VALKEY_URI = process.env.REDIS_URI_KLAGE_JOB_STATUS;
 const VALKEY_USERNAME = process.env.REDIS_USERNAME_KLAGE_JOB_STATUS;
@@ -18,57 +18,112 @@ const DEFAULT_JOB_TIMEOUT = 60 * 10;
 
 type Listener = (event: JobEvent) => void;
 
+const toStr = (value: GlideString): string => (typeof value === 'string' ? value : value.toString());
+
+interface ParsedUri {
+  host: string;
+  port: number;
+  useTLS: boolean;
+}
+
+const parseValkeyUri = (uri: string | undefined): ParsedUri => {
+  if (uri === undefined) {
+    throw new Error('Missing Valkey URI');
+  }
+
+  const url = new URL(uri);
+
+  return {
+    host: url.hostname,
+    port: url.port.length > 0 ? Number(url.port) : 6379,
+    useTLS: url.protocol === 'rediss:' || url.protocol === 'valkeys:',
+  };
+};
+
 class Jobs {
-  #client: RedisClientType;
-  #subscribeClient: RedisClientType;
+  #client: GlideClient | undefined;
+
+  #channelListeners = new Map<string, Set<Listener>>();
+  #patternListeners = new Map<string, Set<Listener>>();
 
   #isReady = false;
 
   #traceId = getTraceId();
   #spanId = getSpanId();
 
-  constructor() {
-    this.#client = createClient({
-      url: VALKEY_URI,
-      username: VALKEY_USERNAME,
-      password: VALKEY_PASSWORD,
-      pingInterval: 3_000,
-    });
+  get #valkey(): GlideClient {
+    if (this.#client === undefined) {
+      throw new Error('Valkey client is not initialized');
+    }
 
-    this.#client.on('error', (error) =>
-      LOGS.error('Valkey Data Client Error', this.#traceId, this.#spanId, 'valkey', {
-        error: error instanceof Error ? error : 'Unknown error',
-      }),
-    );
-    this.#subscribeClient = this.#client.duplicate();
-    this.#subscribeClient.on('error', (error) =>
-      LOGS.error('Valkey Subscribe Client Error', this.#traceId, this.#spanId, 'valkey', {
-        error: error instanceof Error ? error : 'Unknown error',
-      }),
-    );
+    return this.#client;
   }
+
+  #onPubSubMessage = (msg: PubSubMsg) => {
+    try {
+      const message: unknown = JSON.parse(toStr(msg.message));
+
+      if (!isJobEvent(message)) {
+        return;
+      }
+
+      if (msg.pattern !== null && msg.pattern !== undefined) {
+        const listeners = this.#patternListeners.get(toStr(msg.pattern));
+        listeners?.forEach((listener) => {
+          listener(message);
+        });
+        return;
+      }
+
+      const listeners = this.#channelListeners.get(toStr(msg.channel));
+      listeners?.forEach((listener) => {
+        listener(message);
+      });
+    } catch (error) {
+      LOGS.error('Error handling pub/sub message', this.#traceId, this.#spanId, 'valkey', {
+        error: error instanceof Error ? error : 'Unknown error',
+      });
+    }
+  };
 
   public get isReady() {
     return this.#isReady;
   }
 
   public async init() {
-    await Promise.all([this.#subscribeClient.connect(), this.#client.connect()]);
-    LOGS.debug('Connected to Valkey Data and Subscribe clients', this.#traceId, this.#spanId, 'init');
+    const { host, port, useTLS } = parseValkeyUri(VALKEY_URI);
+
+    this.#client = await GlideClient.createClient({
+      addresses: [{ host, port }],
+      useTLS,
+      credentials: VALKEY_PASSWORD === undefined ? undefined : { username: VALKEY_USERNAME, password: VALKEY_PASSWORD },
+      protocol: ProtocolVersion.RESP3,
+      pubsubSubscriptions: {
+        channelsAndPatterns: {},
+        callback: this.#onPubSubMessage,
+      },
+    });
+
+    LOGS.debug('Connected to Valkey client', this.#traceId, this.#spanId, 'init');
     await this.#clean();
     this.#isReady = true;
   }
 
+  #keys = async (pattern: string): Promise<string[]> => {
+    const result = await this.#valkey.customCommand(['KEYS', pattern]);
+    return Array.isArray(result) ? result.map((key) => toStr(key as GlideString)) : [];
+  };
+
   #clean = async () => {
     // Clean up invalid jobs
-    const keys = await this.#client.keys('*');
+    const keys = await this.#keys('*');
 
     if (keys.length === 0) {
       LOGS.debug('No jobs to clean up', this.#traceId, this.#spanId, 'clean');
       return;
     }
 
-    const jobs = await this.#client.mGet(keys);
+    const jobs = await this.#valkey.mget(keys);
 
     let index = -1;
     const keysToDelete: string[] = [];
@@ -81,7 +136,7 @@ class Jobs {
       }
 
       try {
-        const parsedJob: unknown = JSON.parse(job);
+        const parsedJob: unknown = JSON.parse(toStr(job));
 
         if (isJob(parsedJob)) {
           // Job is valid. Nothing to clean up.
@@ -89,7 +144,7 @@ class Jobs {
         }
       } catch (error) {
         // Job is not valid JSON. Log the error and delete the job.
-        LOGS.error(`Error parsing job ${job}`, this.#traceId, this.#spanId, 'clean', {
+        LOGS.error(`Error parsing job ${toStr(job)}`, this.#traceId, this.#spanId, 'clean', {
           error: error instanceof Error ? error : 'Unknown error',
         });
       }
@@ -97,7 +152,7 @@ class Jobs {
       const key = keys[index];
 
       if (key === undefined) {
-        LOGS.error(`Missing key for invalid job ${job}`, this.#traceId, this.#spanId, 'clean');
+        LOGS.error(`Missing key for invalid job ${toStr(job)}`, this.#traceId, this.#spanId, 'clean');
         continue;
       }
 
@@ -112,7 +167,7 @@ class Jobs {
 
     LOGS.warn(`Deleting invalid jobs: ${keysToDelete.join(', ')}`, this.#traceId, this.#spanId, 'clean');
     // Delete all invalid jobs.
-    await this.#client.del(keysToDelete);
+    await this.#valkey.del(keysToDelete);
 
     // Publish delete events for all invalid jobs.
     const publishPromises: Promise<void>[] = [];
@@ -174,8 +229,8 @@ class Jobs {
       const key = formatJobKey(jobKey);
       const json = JSON.stringify(createJob);
       await Promise.all([
-        this.#client.set(key, json, {
-          expiration: { type: 'EX', value: DELETE_JOB_AFTER }, // EX seconds -- Set the specified expire time, in seconds (a positive integer).
+        this.#valkey.set(key, json, {
+          expiry: { type: TimeUnit.Seconds, count: DELETE_JOB_AFTER },
         }),
         this.#publish({ job: createJob, eventType: JobEventType.CREATED }),
       ]);
@@ -216,17 +271,18 @@ class Jobs {
 
   #get = async (log: Context, jobKey: JobKey): Promise<[Job, null] | [null, ErrorEnum]> => {
     const key = formatJobKey(jobKey);
-    const fetchedJob = await this.#client.get(key);
+    const fetchedJob = await this.#valkey.get(key);
 
     if (fetchedJob === null) {
       log.warn(`Job "${key}" not found`);
       return [null, ErrorEnum.NOT_FOUND];
     }
 
-    const job: unknown = JSON.parse(fetchedJob);
+    const jobStr = toStr(fetchedJob);
+    const job: unknown = JSON.parse(jobStr);
 
     if (!isJob(job)) {
-      log.error(`Invalid job ${key}\n${fetchedJob}`);
+      log.error(`Invalid job ${key}\n${jobStr}`);
       this.#delete(log, jobKey);
       return [null, ErrorEnum.NOT_FOUND];
     }
@@ -251,13 +307,13 @@ class Jobs {
   }
 
   public async getAll(log: Context, namespace: string): Promise<Job[]> {
-    const keys = await this.#client.keys(`${namespace}:*`);
+    const keys = await this.#keys(`${namespace}:*`);
 
     if (keys.length === 0) {
       return [];
     }
 
-    const jobs = await this.#client.mGet(keys);
+    const jobs = await this.#valkey.mget(keys);
 
     const parsedJobs: Job[] = [];
 
@@ -266,10 +322,10 @@ class Jobs {
         continue;
       }
 
-      const parsedJob: unknown = JSON.parse(job);
+      const parsedJob: unknown = JSON.parse(toStr(job));
 
       if (!isJob(parsedJob)) {
-        log.error(`Invalid job ${job}`);
+        log.error(`Invalid job ${toStr(job)}`);
         continue;
       }
 
@@ -318,8 +374,8 @@ class Jobs {
     try {
       const json = JSON.stringify(updatedJob);
       await Promise.all([
-        this.#client.set(key, json, {
-          expiration: { type: 'EX', value: DELETE_JOB_AFTER }, // EX seconds -- Set the specified expire time, in seconds (a positive integer).
+        this.#valkey.set(key, json, {
+          expiry: { type: TimeUnit.Seconds, count: DELETE_JOB_AFTER },
         }),
         this.#publish({ job: updatedJob, eventType: JobEventType.UPDATED }),
       ]);
@@ -362,7 +418,7 @@ class Jobs {
     const { id: jobId, namespace } = jobKey;
     try {
       const key = formatJobKey(jobKey);
-      await Promise.all([this.#client.del(key), this.#publish({ eventType: JobEventType.DELETED, job: jobKey })]);
+      await Promise.all([this.#valkey.del([key]), this.#publish({ eventType: JobEventType.DELETED, job: jobKey })]);
       log.debug(`Deleted job "${key}"`, { jobId, namespace });
     } catch (error) {
       log.error('Error deleting job data', {
@@ -387,10 +443,10 @@ class Jobs {
     return await this.#delete(log, { id: jobId, namespace });
   }
 
-  #exists = async (jobKey: JobKey): Promise<boolean> => (await this.#client.exists(formatJobKey(jobKey))) !== 0;
+  #exists = async (jobKey: JobKey): Promise<boolean> => (await this.#valkey.exists([formatJobKey(jobKey)])) !== 0;
 
   public async getNamespaces(log: Context): Promise<string[]> {
-    const keys = await this.#client.keys('*');
+    const keys = await this.#keys('*');
     const namespaces = new Set<string>();
 
     for (const key of keys) {
@@ -421,13 +477,15 @@ class Jobs {
       return;
     }
 
-    await this.#subscribeClient.subscribe(formatJobKey({ id: jobId, namespace }), (message) => {
-      const event: unknown = JSON.parse(message);
+    const channel = formatJobKey({ id: jobId, namespace });
+    const listeners = this.#channelListeners.get(channel) ?? new Set<Listener>();
+    const isNewChannel = listeners.size === 0;
+    listeners.add(listener);
+    this.#channelListeners.set(channel, listeners);
 
-      if (isJobEvent(event)) {
-        listener(event);
-      }
-    });
+    if (isNewChannel) {
+      await this.#valkey.subscribeLazy([channel]);
+    }
   }
 
   public async unsubscribe(log: Context, namespace: string, jobId: string) {
@@ -436,30 +494,47 @@ class Jobs {
     }
 
     const jobKey: JobKey = { id: jobId, namespace };
+    const channel = formatJobKey(jobKey);
+    const listeners = this.#channelListeners.get(channel);
 
-    await this.#subscribeClient.unsubscribe(formatJobKey(jobKey));
+    if (listeners === undefined) {
+      return;
+    }
+
+    this.#channelListeners.delete(channel);
+    await this.#valkey.unsubscribeLazy([channel]);
   }
 
   public async subscribeAll(namespace: string, listener: Listener) {
-    await this.#subscribeClient.pSubscribe(`${namespace}:*`, (message) => {
-      const event: unknown = JSON.parse(message);
+    const pattern = `${namespace}:*`;
+    const listeners = this.#patternListeners.get(pattern) ?? new Set<Listener>();
+    const isNewPattern = listeners.size === 0;
+    listeners.add(listener);
+    this.#patternListeners.set(pattern, listeners);
 
-      if (isJobEvent(event)) {
-        listener(event);
-      }
-    });
+    if (isNewPattern) {
+      await this.#valkey.psubscribeLazy([pattern]);
+    }
   }
 
   public async unsubscribeAll(namespace: string) {
-    await this.#subscribeClient.pUnsubscribe(`${namespace}:*`);
+    const pattern = `${namespace}:*`;
+    const listeners = this.#patternListeners.get(pattern);
+
+    if (listeners === undefined) {
+      return;
+    }
+
+    this.#patternListeners.delete(pattern);
+    await this.#valkey.punsubscribeLazy([pattern]);
   }
 
   async #publish(event: JobEvent) {
-    await this.#client.publish(formatJobKey(event.job), JSON.stringify(event));
+    await this.#valkey.publish(JSON.stringify(event), formatJobKey(event.job));
   }
 
   public async ping() {
-    const res = await this.#client.ping();
+    const res = await this.#valkey.ping();
     return res.length > 0;
   }
 }
