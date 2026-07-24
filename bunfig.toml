@@ -1,4 +1,23 @@
 [install]
 exact = true
 minimumReleaseAge = 259200
+# next@16.2.12 is the first release that supports experimental.useTypeScriptCli,
+# required to build with typescript@7 (the native tsgo compiler). Remove this
+# exclusion once minimumReleaseAge naturally clears 16.2.12 (published 2026-07-2x).
+minimumReleaseAgeExcludes = [
+  "next",
+  "@next/env",
+  "@next/swc-darwin-x64",
+  "@next/swc-darwin-arm64",
+  "@next/swc-linux-x64-gnu",
+  "@next/swc-linux-x64-musl",
+  "@next/swc-linux-arm64-gnu",
+  "@next/swc-linux-arm64-musl",
+  "@next/swc-win32-x64-msvc",
+  "@next/swc-win32-arm64-msvc",
+]
 ignoreScripts = true
+
+[test]
+# `e2e/**` needs Playwright's runner (`bun run e2e`), not `bun test` - see `e2e/run.ts`.
+pathIgnorePatterns = "e2e/**"

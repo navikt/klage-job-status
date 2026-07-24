@@ -1,5 +1,9 @@
 name: Deploy
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
   push:
@@ -14,59 +18,70 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
+      id-token: write # required for nais/docker-build-push and nais/deploy workload identity federation
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 
-      - name: Install global dependencies
-        run: bun install --frozen-lockfile --ignore-scripts
-
-      - name: Install API dependencies
-        working-directory: api
-        run: bun install --frozen-lockfile --ignore-scripts
-
-      - name: Build API
-        working-directory: api
-        run: bun run build
-
       - name: Add GitHub NPM registry token
-        working-directory: app
-        run: echo -e "\n[install.scopes]\n\"@navikt\" = { token = \"${{ secrets.READER_TOKEN }}\", url = \"https://npm.pkg.github.com/\" }" >> bunfig.toml
+        shell: bash
+        env:
+          READER_TOKEN: ${{ secrets.READER_TOKEN }}
+        run: echo -e "\n[install.scopes]\n\"@navikt\" = { token = \"$READER_TOKEN\", url = \"https://npm.pkg.github.com/\" }" >> bunfig.toml
 
-      - name: Install app dependencies
-        working-directory: app
+      - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
 
-      - name: Build app
-        working-directory: app
-        run: bun run build
+      - name: Install GitHub Action dependencies
+        working-directory: action
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Typecheck
+        run: bun typecheck
+
+      - name: Lint
+        run: bun lint
 
       - name: Run tests
         run: bun test
 
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: bun e2e
+
+      - name: Build
+        env:
+          # Reference static assets from the NAV CDN (uploaded in the next step).
+          ASSET_PREFIX: https://cdn.nav.no/klage/klage-job-status
+        run: bun run build
+
       - name: Upload static files to CDN
-        uses: nais/deploy/actions/cdn-upload/v2@master
+        uses: nais/deploy/actions/cdn-upload/v2@fc3eae3edebabdf67f7592102ae16176d5ba3b5f # v2
         with:
           team: klage
-          source: ./app/dist/assets
-          destination: klage-job-status
+          source: ./.next/static
+          destination: klage-job-status/_next
           project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }}
           identity_provider: ${{ secrets.NAIS_WORKLOAD_IDENTITY_PROVIDER }}
 
       - name: Build & push Docker image
-        uses: nais/docker-build-push@v0
+        uses: nais/docker-build-push@31c3a7321909bcb20799fdf46153fec721fd9512 # v0
         id: docker-build-push
         with:
           team: klage # required
           tag: ${{ github.sha }} # optional
           push_image: true # optional, default true
           dockerfile: Dockerfile # optional, default Dockerfile
+          # The image only copies the CI-built .next/standalone + .next/static.
           docker_context: . # optional, default .
           cache_from: type=gha # optional, default type=gha
           cache_to: type=gha,mode=max # optional, default type=gha,mode=max
@@ -74,7 +89,7 @@ jobs:
           project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }} # required, but is defined as an organization variable
 
       - name: Deploy
-        uses: nais/deploy/actions/deploy@v2
+        uses: nais/deploy/actions/deploy@fc3eae3edebabdf67f7592102ae16176d5ba3b5f # v2
         env:
           CLUSTER: dev-gcp
           RESOURCE: nais/nais.yaml

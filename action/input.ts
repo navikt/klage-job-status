@@ -41,7 +41,14 @@ export const API_KEY = IS_GITHUB_ACTION
 
 export const TIMEOUT = IS_GITHUB_ACTION ? getTimeout() : 600; // How long this action will wait for the job to finish (in seconds)
 
-export const BASE_URL = IS_GITHUB_ACTION ? 'https://klage-job-status.ekstern.dev.nav.no' : 'http://localhost:8080';
+// `ACTION_TEST_BASE_URL` overrides the default for either mode - used by `action/run-child-process.ts`
+// to point the action at the ephemeral server the tests start, without having to fake being a
+// real GitHub Action. Deliberately not named `BASE_URL`: this action is a composite action
+// consumed by other repos' workflows, which may already define their own unrelated `BASE_URL`
+// job/step env var that would otherwise silently be inherited here.
+export const BASE_URL =
+  process.env.ACTION_TEST_BASE_URL ??
+  (IS_GITHUB_ACTION ? 'https://klage-job-status.ekstern.dev.nav.no' : 'http://localhost:3000');
 
 const getJobUrl = (): URL => {
   const url = URL.parse(`${BASE_URL}/jobs/${JOB_ID}`);

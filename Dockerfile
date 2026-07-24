@@ -1,9 +1,21 @@
-FROM cgr.dev/chainguard/glibc-dynamic:latest@sha256:57e5704e70a85b90191182eb6110d1c817df0d8e96035cb041195c5a351f0861
+FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/node:25-slim@sha256:c41d03dc9d91b5ea7d95602999edecf70bd7f41f5f2f6fd55ea82aa5c4ccb9b6
 
-WORKDIR /usr/src/klage-job-status
+WORKDIR /app
 
-COPY api/dist/api .
-COPY app/dist/index.html .
+ENV NODE_ENV=production
+# Disable telemetry during runtime.
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
 
-CMD ["./api"]
-EXPOSE 8080
+# Bind to all interfaces. Without this, Next reads the pod name from $HOSTNAME in Kubernetes and fails to bind.
+ENV HOSTNAME=0.0.0.0
+
+# Prebuilt standalone server + traced node_modules.
+COPY .next/standalone ./
+# Static assets are not part of the standalone bundle; copy them alongside the server.
+COPY .next/static ./.next/static
+
+EXPOSE 3000
+
+# The base image's entrypoint is `node`; pass the server path as its argument.
+CMD ["server.js"]

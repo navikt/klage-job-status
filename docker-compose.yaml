@@ -1,20 +1,17 @@
+# Convenience compose file for running a local Valkey instance during development.
+# Start it with `docker compose up -d`, then see the "Lokal utvikling" section in
+# README.md for how to point the app at it. Not used by the app's own Docker image
+# (see Dockerfile), which only copies the CI-built Next.js standalone output.
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - '8081:8080'
-    environment:
-      - REDIS_URI_KLAGE_JOB_STATUS=redis://valkey:6379/0
-      - REDIS_USERNAME_KLAGE_JOB_STATUS=default
-      - REDIS_PASSWORD_KLAGE_JOB_STATUS=redis_password
-      - API_KEY_SECRET=secret
   valkey:
     image: valkey/valkey:alpine
-    restart: always
+    restart: unless-stopped
     ports:
       - '6379:6379'
-    command: valkey-server --loglevel warning --requirepass redis_password
-    volumes: 
+    volumes:
       - ./valkey-data:/data
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 2s
+      timeout: 2s
+      retries: 15

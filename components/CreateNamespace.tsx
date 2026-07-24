@@ -1,0 +1,74 @@
+'use client';
+
+import { NAMESPACE_MAX_LENGTH, NAMESPACE_MIN_LENGTH, NAMESPACE_REGEX } from '@common/common';
+import { PlusIcon } from '@navikt/aksel-icons';
+import { Alert, BodyShort, Button, List, Modal, TextField } from '@navikt/ds-react';
+import { useRef, useState } from 'react';
+import { ApiKeys } from '@/components/api-keys/ApiKeys';
+
+/**
+ * Lets a user create a namespace, from their point of view - they type a name and get API keys
+ * to use it with. Under the hood this doesn't persist anything: `generateApiKey`
+ * (`lib/api-key/create.ts`) just HMAC-signs `<namespace>:<scope>` on the fly, and the namespace
+ * only starts to really exist once a job is written to it with one of these keys.
+ */
+export const CreateNamespace = () => {
+  const modalRef = useRef<HTMLDialogElement>(null);
+  const [namespace, setNamespace] = useState<string>('');
+
+  return (
+    <>
+      <Button variant="primary" onClick={() => modalRef.current?.showModal()} icon={<PlusIcon aria-hidden />}>
+        Create Namespace
+      </Button>
+
+      <Modal header={{ heading: 'Create Namespace' }} ref={modalRef} closeOnBackdropClick width="medium">
+        <Modal.Body>
+          <Alert variant="info" size="small" className="mb-4">
+            <BodyShort spacing>Enter a name for the namespace you want to create.</BodyShort>
+            <BodyShort spacing>The namespace should be your Nais team name or use that as a prefix.</BodyShort>
+            <BodyShort>
+              Example:{' '}
+              <span className="bg-ax-bg-sunken px-2 py-1 font-mono text-ax-small text-ax-text-warning-subtle">
+                klage-e2e
+              </span>
+            </BodyShort>
+          </Alert>
+
+          <TextField
+            label="Namespace"
+            value={namespace}
+            onChange={(e) => setNamespace(e.target.value)}
+            onBlur={() => {
+              setNamespace(namespace);
+            }}
+            className="mb-4 w-full"
+            autoFocus
+            pattern={NAMESPACE_REGEX.source}
+            minLength={NAMESPACE_MIN_LENGTH}
+            maxLength={NAMESPACE_MAX_LENGTH}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck="false"
+            autoCapitalize="off"
+          />
+
+          <List size="small" className="mb-8 italic">
+            <List.Item>
+              Namespace must be between {NAMESPACE_MIN_LENGTH} and {NAMESPACE_MAX_LENGTH} characters.
+            </List.Item>
+            <List.Item>Namespace can only contain lowercase letters, numbers, dashes, and underscores.</List.Item>
+          </List>
+
+          <ApiKeys namespace={namespace} />
+        </Modal.Body>
+
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => modalRef.current?.close()}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
+  );
+};

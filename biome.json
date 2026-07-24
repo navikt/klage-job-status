@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.6/schema.json",
   "root": true,
   "vcs": {
     "enabled": true,
@@ -85,24 +85,23 @@
       "enabled": true
     }
   },
+  "json": {
+    "formatter": {
+      "enabled": true,
+      "indentWidth": 2,
+      "indentStyle": "space",
+      "lineEnding": "lf",
+      "trailingCommas": "none",
+      "trailingNewline": true,
+      "bracketSpacing": true
+    }
+  },
   "css": {
     "parser": {
       "tailwindDirectives": true
     }
   },
-  "overrides": [
-    {
-      "includes": ["**/api/**", "**/action/**"],
-      "linter": {
-        "rules": {
-          "correctness": {
-            "noNodejsModules": "off"
-          }
-        }
-      }
-    }
-  ],
   "files": {
-    "includes": ["**", "!**/.bruno", "!**/app/dist"]
+    "includes": ["**", "!**/.bruno"]
   }
 }
