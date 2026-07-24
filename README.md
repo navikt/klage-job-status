@@ -201,3 +201,45 @@ Returnerer `true` hvis jobben har `status` `RUNNING`, ellers `false`.
 Sletter jobben.
 
 Returnerer `Deleted job <jobId>`.
+
+## Lokal utvikling
+Appen er en Next.js-app i rotmappen som deler kode med GitHub Action-en (`action/`) via `lib/common/`.
+
+### Forutsetninger
+- [Bun](https://bun.sh) (versjon i `.tool-versions`)
+- Docker (for å kjøre Valkey lokalt)
+- Tilgang til `@navikt`-pakker fra GitHub Packages (autentisering i `~/.bunfig.toml` eller `~/.npmrc`)
+
+### Kom i gang
+1. Installer avhengigheter:
+   ```sh
+   bun i
+   ```
+
+2. Start en lokal Valkey:
+   ```sh
+   docker compose up
+   ```
+
+3. Opprett `.env.local`:
+   ```sh
+   REDIS_URI_KLAGE_JOB_STATUS=redis://localhost:6379
+   API_KEY_SECRET=secret
+   ```
+
+4. Start utviklingsserveren:
+   ```sh
+   bun run dev
+   ```
+   Appen kjører på http://localhost:3000.
+
+### API-nøkler lokalt
+Med `API_KEY_SECRET=secret` er eksempel-nøklene i [API Key](#api-key) gyldige lokalt (namespace `klage`):
+- `API_KEY: klage:read.MU71PJn99JCV2a2py6uQw3_aL7I6YSH_Dd3HLAhr5WM`
+- `API_KEY: klage:write.LUnvtF_j11pgeJAIRm-NdcdaJ5Fbq74nydx3F7TAVTo`
+
+### Andre kommandoer
+- `bun run lint` – lint med Biome
+- `bun run test` – kjør tester (Valkey-testene krever Docker)
+- `bun run e2e` – kjør Playwright end-to-end-tester i en ekte nettleser mot en ekte Next.js-server og en engangs-Valkey i Docker (krever Docker og `bunx playwright install chromium` første gang; starter og stopper både Valkey og utviklingsserveren automatisk)
+- `bun run build` – produksjonsbygg

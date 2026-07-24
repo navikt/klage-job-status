@@ -1,0 +1,10 @@
+# The image is assembled from the Next.js standalone output built in CI
+# (the "Build" workflow step), not built inside Docker. Exclude host
+# dependencies and caches, but keep the traced node_modules that live inside
+# .next/standalone.
+/node_modules
+/action/node_modules
+/.next/cache
+/.git
+/valkey-data
+**/.DS_Store

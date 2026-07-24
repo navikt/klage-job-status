@@ -10,6 +10,6 @@
   "filesCount": 7,
   "presets": {
     "requestType": "http",
-    "requestUrl": "http://localhost:8080/jobs/"
+    "requestUrl": "http://localhost:3000/jobs/"
   }
 }

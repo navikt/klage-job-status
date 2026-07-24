@@ -1,37 +1,44 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "useDefineForClassFields": true,
-    "lib": ["ESNext"],
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "module": "ESNext",
     "skipLibCheck": true,
-
+    "jsx": "react-jsx",
+    "plugins": [{ "name": "next" }],
     "types": ["@types/bun"],
-
     /* Bundler mode */
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "noUncheckedIndexedAccess": true,
     "isolatedModules": true,
     "noEmit": true,
-
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-
     /* Paths */
     "paths": {
-      "@api/*": ["./api/*"],
+      "@/*": ["./*"],
       "@action/*": ["./action/*"],
-      "@app/*": ["./app/*"],
-      "@common/*": ["./common/*"]
+      "@common/*": ["./lib/common/*"]
     },
-
     "incremental": true,
-    "tsBuildInfoFile": ".tsbuildinfo"
+    "tsBuildInfoFile": ".tsbuildinfo",
+    "allowJs": true,
+    "esModuleInterop": true
   },
-  "include": ["api/**/*", "action/**/*", "app/**/*", "common/**/*"]
+  "include": [
+    "action/**/*",
+    "lib/common/**/*",
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "playwright.config.ts",
+    "proxy.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
 }

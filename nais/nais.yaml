@@ -6,6 +6,7 @@ metadata:
   labels:
     team: klage
 spec:
+  port: 3000
   image: {{image}}
   replicas:
     min: 2
@@ -13,9 +14,9 @@ spec:
   resources:
     requests:
       cpu: 400m
-      memory: 64Mi
+      memory: 256Mi
     limits:
-      memory: 96Mi
+      memory: 512Mi
   ingresses:
     - https://klage-job-status.ekstern.dev.nav.no
   valkey:
@@ -23,6 +24,12 @@ spec:
       access: readwrite
   envFrom:
     - secret: klage-job-status
+  observability:
+    autoInstrumentation:
+      enabled: true
+      # The app configures its own OpenTelemetry SDK (see instrumentation.otel.ts), so only
+      # the OTEL_* environment variables are injected - no auto-instrumentation agent.
+      runtime: sdk
   azure:
     application:
       enabled: true
@@ -36,14 +43,19 @@ spec:
       autoLogin: true
       autoLoginIgnorePaths:
         - /jobs/**
+        - /_next/**
   liveness:
     path: /isAlive
-    initialDelay: 3
     periodSeconds: 1
     timeout: 1
     failureThreshold: 10
   readiness:
     path: /isReady
+    periodSeconds: 1
+    timeout: 1
+    failureThreshold: 10
+  startup:
+    path: /isStarted
     initialDelay: 3
     periodSeconds: 1
     timeout: 1

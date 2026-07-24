@@ -1,13 +1,15 @@
 import { handleJob } from '@action/handle-job';
 import { debug, ExitCode, error, info, warning } from '@actions/core';
 import { isJob, isJobEventType, type Job, JobEventType } from '@common/common';
+import { parseJson } from '@/lib/json';
 
 const EVENT_PREFIX = 'event:';
 const EVENT_PREFIX_LENGTH = EVENT_PREFIX.length;
 const DATA_PREFIX = 'data:';
 const DATA_PREFIX_LENGTH = DATA_PREFIX.length;
 
-const parseSseEvent = (chunk: string): Job | null => {
+/** Exported for `action/sse.test.ts` - not used outside this module otherwise. */
+export const parseSseEvent = (chunk: string): Job | null => {
   const lines = chunk.trim().split('\n');
 
   let event: string | null = null;
@@ -46,7 +48,7 @@ const parseSseEvent = (chunk: string): Job | null => {
     return null;
   }
 
-  const job: unknown = JSON.parse(data);
+  const job = parseJson(data);
 
   if (!isJob(job)) {
     warning(`Unexpected SSE data:\n${data}`, { title: 'SSE parse warning' });
