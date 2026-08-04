@@ -64,20 +64,9 @@ export const sse = async (response: Response) => {
     process.exit(ExitCode.Failure);
   }
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder('utf-8');
-
   info('Waiting for SSE events...');
 
-  while (true) {
-    const { value, done } = await reader.read();
-
-    if (done) {
-      break;
-    }
-
-    const chunk = decoder.decode(value);
-
+  for await (const chunk of readSseEvents(response.body)) {
     debug(`Received SSE chunk\n${chunk}`);
 
     const job = parseSseEvent(chunk);
@@ -89,3 +78,50 @@ export const sse = async (response: Response) => {
     }
   }
 };
+
+/**
+ * Reads `stream`, buffering across `reader.read()` calls, and yields each complete SSE event
+ * (`event:...\ndata:...\n\n`) as soon as its terminating blank line has arrived - regardless of
+ * how the underlying reads happened to be chunked.
+ *
+ * A single SSE event is not guaranteed to arrive in one `read()` call - large payloads (e.g. a
+ * long job `name`) can be split across multiple reads at an arbitrary byte offset, including
+ * mid-line. Without this buffering, each raw read would be parsed as if it were a complete
+ * event, corrupting both halves of the split event instead of just delaying it by one read.
+ *
+ * Exported for `action/sse.test.ts` - not used outside this module otherwise.
+ */
+export async function* readSseEvents(stream: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+
+      if (done) {
+        if (buffer.trim().length > 0) {
+          debug(`SSE stream ended with an incomplete trailing event, discarding it:\n${buffer}`);
+        }
+
+        return;
+      }
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const lastEventBoundary = buffer.lastIndexOf('\n\n');
+
+      if (lastEventBoundary === -1) {
+        continue;
+      }
+
+      const completeEvents = buffer.slice(0, lastEventBoundary);
+      buffer = buffer.slice(lastEventBoundary + 2);
+
+      yield* completeEvents.split('\n\n');
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
