@@ -40,7 +40,7 @@ export const runAction = async ({
   jobUrl,
   apiKey,
   timeoutSeconds,
-  initialConnectionRetryAttempts = 120,
+  initialConnectionRetryAttempts = 300,
   reconnectAttempts = 30,
   fetchImpl = fetch,
   sleepImpl = Bun.sleep,
