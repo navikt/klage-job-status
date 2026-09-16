@@ -2,7 +2,7 @@ import { API_KEY, JOB_URL, TIMEOUT } from '@action/input';
 import { runAction } from '@action/run';
 
 /**
- * `run.ts`'s own attempt-count defaults (120/30) are what's actually used in production - this
+ * `run.ts`'s own attempt-count defaults (300/30) are what's actually used in production - this
  * override only exists so `e2e/action.test.ts` can shrink them to keep its "job never appears"
  * tests fast, by spawning this file as a real child process with these env vars set. Everything
  * else about `runAction`'s behavior (retry logic, SSE-vs-polling routing, ...) is instead unit
