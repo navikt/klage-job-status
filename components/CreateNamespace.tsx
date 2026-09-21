@@ -2,7 +2,7 @@
 
 import { NAMESPACE_MAX_LENGTH, NAMESPACE_MIN_LENGTH, NAMESPACE_REGEX } from '@common/common';
 import { PlusIcon } from '@navikt/aksel-icons';
-import { Alert, BodyShort, Button, List, Modal, TextField } from '@navikt/ds-react';
+import { Alert, BodyShort, Button, Dialog, List, TextField } from '@navikt/ds-react';
 import { useRef, useState } from 'react';
 import { ApiKeys } from '@/components/api-keys/ApiKeys';
 
@@ -13,17 +13,23 @@ import { ApiKeys } from '@/components/api-keys/ApiKeys';
  * only starts to really exist once a job is written to it with one of these keys.
  */
 export const CreateNamespace = () => {
-  const modalRef = useRef<HTMLDialogElement>(null);
+  const namespaceInputRef = useRef<HTMLInputElement>(null);
   const [namespace, setNamespace] = useState<string>('');
 
   return (
-    <>
-      <Button variant="primary" onClick={() => modalRef.current?.showModal()} icon={<PlusIcon aria-hidden />}>
-        Create Namespace
-      </Button>
+    <Dialog>
+      <Dialog.Trigger>
+        <Button variant="primary" icon={<PlusIcon aria-hidden />}>
+          Create Namespace
+        </Button>
+      </Dialog.Trigger>
 
-      <Modal header={{ heading: 'Create Namespace' }} ref={modalRef} closeOnBackdropClick width="medium">
-        <Modal.Body>
+      <Dialog.Popup initialFocusTo={namespaceInputRef}>
+        <Dialog.Header>
+          <Dialog.Title>Create Namespace</Dialog.Title>
+        </Dialog.Header>
+
+        <Dialog.Body>
           <Alert variant="info" size="small" className="mb-4">
             <BodyShort spacing>Enter a name for the namespace you want to create.</BodyShort>
             <BodyShort spacing>The namespace should be your Nais team name or use that as a prefix.</BodyShort>
@@ -36,6 +42,7 @@ export const CreateNamespace = () => {
           </Alert>
 
           <TextField
+            ref={namespaceInputRef}
             label="Namespace"
             value={namespace}
             onChange={(e) => setNamespace(e.target.value)}
@@ -43,7 +50,6 @@ export const CreateNamespace = () => {
               setNamespace(namespace);
             }}
             className="mb-4 w-full"
-            autoFocus
             pattern={NAMESPACE_REGEX.source}
             minLength={NAMESPACE_MIN_LENGTH}
             maxLength={NAMESPACE_MAX_LENGTH}
@@ -61,14 +67,14 @@ export const CreateNamespace = () => {
           </List>
 
           <ApiKeys namespace={namespace} />
-        </Modal.Body>
+        </Dialog.Body>
 
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => modalRef.current?.close()}>
-            Close
-          </Button>
-        </Modal.Footer>
-      </Modal>
-    </>
+        <Dialog.Footer>
+          <Dialog.CloseTrigger>
+            <Button variant="secondary">Close</Button>
+          </Dialog.CloseTrigger>
+        </Dialog.Footer>
+      </Dialog.Popup>
+    </Dialog>
   );
 };
