@@ -51,22 +51,23 @@ export async function GET(req: Request, { params }: Params) {
     );
   }
 
-  const jobs = await JOBS.getAll(log, namespace);
-
   if (preferredType === AcceptType.JSON) {
-    return Response.json(jobs, { status: 200 });
+    return Response.json(await JOBS.getAll(log, namespace), { status: 200 });
   }
 
   let heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
 
-  // `controller` is only assigned once the stream's `start()` runs below. Subscribing to Valkey
-  // happens *before* that, so by the time `listener` can possibly fire, `start()` has already run
-  // synchronously (there's no `await` in between) and `controller` is guaranteed to be set.
   let controller: ReadableStreamDefaultController<Uint8Array> | null = null;
+  const pendingEvents: Uint8Array[] = [];
 
   const push = (bytes: Uint8Array) => {
+    if (controller === null) {
+      pendingEvents.push(bytes);
+      return;
+    }
+
     try {
-      controller?.enqueue(bytes);
+      controller.enqueue(bytes);
     } catch {
       // Controller already closed (client disconnected).
     }
@@ -78,10 +79,14 @@ export async function GET(req: Request, { params }: Params) {
   // after the client already considers its `EventSource` connected, would open a real window
   // where a job created/updated between "client connected" and "server actually subscribed"
   // publishes an event nobody is listening for yet - Valkey pub/sub has no backlog, so that
-  // event would be lost forever. Awaiting it here guarantees the subscription is active before
-  // the client can possibly be listening.
+  // event would be lost forever. Subscribe before taking the snapshot, and buffer updates until
+  // the stream is ready, so no updates are lost between the snapshot and response.
   const unsubscribe = await JOBS.subscribeNamespace(namespace, (update: JobEvent) => {
     push(sseEvent(update));
+  });
+  const jobs = await JOBS.getAll(log, namespace).catch(async (error: unknown) => {
+    await unsubscribe();
+    throw error;
   });
 
   const stream = new ReadableStream({
@@ -92,9 +97,9 @@ export async function GET(req: Request, { params }: Params) {
         push(sseHeartbeat());
       }, 1_000);
 
-      // A snapshot of the jobs that existed at the very start of this request (`jobs`, fetched
-      // above). The client already has this same data via the server-rendered `initialJobs`
-      // prop on first load (see `components/JobsServer.tsx`), but replaying it here too means a
+      // A snapshot of the jobs captured after the namespace subscription becomes active.
+      // The client already has this same data via the server-rendered `initialJobs` prop on first
+      // load (see `components/JobsServer.tsx`), but replaying it here too means a
       // *reconnect* (the browser's `EventSource` retries automatically on any drop) also
       // resyncs the full current state, not just future events - covering for anything missed
       // while disconnected.
@@ -102,6 +107,11 @@ export async function GET(req: Request, { params }: Params) {
         const event: CreateJobEvent = { job, eventType: JobEventType.CREATED };
         push(sseEvent(event));
       }
+
+      for (const event of pendingEvents) {
+        push(event);
+      }
+      pendingEvents.length = 0;
     },
     async cancel() {
       if (heartbeatIntervalId !== null) {
