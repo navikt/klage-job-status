@@ -19,10 +19,10 @@ jobs:
       pull-requests: write # digestabot opens a PR with the digest bump
       id-token: write # required by nais/docker-build-push OIDC in downstream workflows triggered by the PR
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - uses: navikt/digestabot@3302a753e533ceb9ec216de7f78345436cd636e3 # v1.2
+      - uses: navikt/digestabot@v1.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           team: klage
